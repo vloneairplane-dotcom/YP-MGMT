@@ -115,19 +115,24 @@ def project_type_pick() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(rows)
 
 
-def deadline_pick() -> InlineKeyboardMarkup:
+def deadline_pick(prefix: str = "dl", pid: int | None = None) -> InlineKeyboardMarkup:
+    """Quick deadline buttons. With `pid` they target `{prefix}:{pid}:{val}`
+    (used by the standalone deadline-edit flow); otherwise `{prefix}:{val}`."""
+    def data(val: str) -> str:
+        return f"{prefix}:{pid}:{val}" if pid is not None else f"{prefix}:{val}"
+
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("📅 ۳ روز", callback_data="dl:3"),
-            InlineKeyboardButton("📅 ۱ هفته", callback_data="dl:7"),
+            InlineKeyboardButton("📅 ۳ روز", callback_data=data("3")),
+            InlineKeyboardButton("📅 ۱ هفته", callback_data=data("7")),
         ],
         [
-            InlineKeyboardButton("📅 ۲ هفته", callback_data="dl:14"),
-            InlineKeyboardButton("📅 ۱ ماه", callback_data="dl:30"),
+            InlineKeyboardButton("📅 ۲ هفته", callback_data=data("14")),
+            InlineKeyboardButton("📅 ۱ ماه", callback_data=data("30")),
         ],
         [
-            InlineKeyboardButton("✍️ تاریخ دستی", callback_data="dl:manual"),
-            InlineKeyboardButton("🚫 بدون ددلاین", callback_data="dl:none"),
+            InlineKeyboardButton("✍️ تاریخ دستی", callback_data=data("manual")),
+            InlineKeyboardButton("🚫 بدون ددلاین", callback_data=data("none")),
         ],
     ])
 

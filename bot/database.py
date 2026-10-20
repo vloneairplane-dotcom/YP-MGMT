@@ -122,6 +122,12 @@ def get_user(tg_id: int) -> sqlite3.Row | None:
         return db.execute("SELECT * FROM users WHERE tg_id=?", (tg_id,)).fetchone()
 
 
+def get_user_by_id(user_db_id: int) -> sqlite3.Row | None:
+    """Look up by internal row id (what the inline keyboards carry)."""
+    with get_db() as db:
+        return db.execute("SELECT * FROM users WHERE id=?", (user_db_id,)).fetchone()
+
+
 def list_users(role: str | None = None) -> list[sqlite3.Row]:
     q = "SELECT * FROM users WHERE is_banned=0"
     args: tuple = ()
@@ -170,6 +176,10 @@ def update_project(pid: int, **fields) -> None:
 
 def set_project_status(pid: int, status: str) -> None:
     update_project(pid, status=status)
+
+
+def set_project_deadline(pid: int, deadline: str | None) -> None:
+    update_project(pid, deadline=deadline)
 
 
 def archive_project(pid: int) -> None:

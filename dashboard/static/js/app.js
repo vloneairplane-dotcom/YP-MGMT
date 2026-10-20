@@ -32,7 +32,7 @@ function render(d) {
     ndBox.querySelector(".nd-title").innerHTML =
       `${nd.type.emoji} ${esc(nd.title)}`;
     ndBox.querySelector(".nd-when").innerHTML =
-      `${esc(nd.deadline)} · <span class="tone-${nd.deadline_meta.tone}">${esc(nd.deadline_meta.label)}</span>`;
+      `<bdi>${esc(nd.deadline)}</bdi> · <span class="tone-${nd.deadline_meta.tone}">${esc(nd.deadline_meta.label)}</span>`;
   } else {
     ndBox.querySelector(".nd-title").textContent = "همه‌چیز آرومه ✅";
     ndBox.querySelector(".nd-when").textContent = "ددلاین نزدیکی ثبت نشده";

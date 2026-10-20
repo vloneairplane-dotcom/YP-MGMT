@@ -89,6 +89,13 @@ def parse_deadline(text: str) -> str | None:
     return None
 
 
+def date_disp(deadline: str | None) -> str:
+    """Wrap an ISO date in LRM marks so RTL bidi doesn't flip it backwards."""
+    if not deadline:
+        return "—"
+    return f"\u200e{deadline}\u200e"
+
+
 def progress_bar(done: int, total: int, width: int = 8) -> str:
     if total == 0:
         return "▫️" * width

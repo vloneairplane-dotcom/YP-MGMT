@@ -11,11 +11,11 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.config import PROJECT_STATUSES, PROJECT_TYPES, STATUS_FLOW
-from bot.utils import (deadline_badge, esc, is_manager, parse_deadline, user_of,
-                       progress_bar)
+from bot.utils import (date_disp, deadline_badge, esc, is_manager, parse_deadline,
+                       user_of, progress_bar)
 
 # conversation states
-P_TITLE, P_TYPE, P_DESC, P_DL = range(4)
+P_TITLE, P_TYPE, P_DESC, P_DL, P_CONFIRM = range(5)
 DL_WAIT = 100
 
 _draft: dict[int, dict] = {}
@@ -123,6 +123,89 @@ async def project_archive(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.edit_message_text("🗄 پروژه آرشیو شد.", reply_markup=kb.back("menu:projects"))
 
 
+async def project_edit_deadline(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """proj:dl:{pid} — standalone deadline editor with quick presets."""
+    query = update.callback_query
+    if not query:
+        return
+    user = user_of(update, context)
+    if not is_manager(user):
+        await query.answer(texts.NO_PERMISSION, show_alert=True)
+        return
+    pid = int((query.data or "").split(":")[2])
+    p = db.get_project(pid)
+    if not p:
+        await query.answer("پروژه پیدا نشد", show_alert=True)
+        return
+    await query.answer()
+    await query.edit_message_text(
+        f"⏰ ددلاین فعلی «{esc(p['title'])}»: <b>{date_disp(p['deadline'])}</b>\n"
+        "یک گزینه بزن یا تاریخ دستی بنویس:",
+        reply_markup=kb.deadline_pick(prefix="proj:dlq", pid=pid),
+    )
+    context.user_data["dl_edit_pid"] = pid
+
+
+async def project_edit_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """proj:dlq:{pid}:{val} — apply a preset or ask for manual text."""
+    query = update.callback_query
+    if not query:
+        return
+    user = user_of(update, context)
+    if not is_manager(user):
+        await query.answer(texts.NO_PERMISSION, show_alert=True)
+        return
+    _, _, pid_s, val = (query.data or "").split(":")
+    pid = int(pid_s)
+    if val == "manual":
+        context.user_data["dl_edit_pid"] = pid
+        await query.answer()
+        await query.edit_message_text(
+            "✍️ تاریخ جدید رو بنویس (مثال: <code>2026-11-01</code> یا <code>10 روز دیگر</code>)\n"
+            "برای حذف ددلاین «-» رو بفرست:",
+            reply_markup=kb.back(f"proj:view:{pid}"),
+        )
+        return
+    deadline = None
+    if val.isdigit():
+        deadline = (datetime.utcnow() + timedelta(days=int(val))).strftime("%Y-%m-%d")
+    db.set_project_deadline(pid, deadline)
+    p = db.get_project(pid)
+    if p and user:
+        db.log_activity(user["id"], "project",
+                        f"ددلاین «{p['title']}» → {deadline or 'بدون'}")
+    await query.answer("✅ ددلاین به‌روزرسانی شد")
+    if p:
+        await project_view(update, context)
+
+
+async def handle_dl_edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+    """Manual date typed after proj:dlq:{pid}:manual. Returns True if consumed."""
+    pid = context.user_data.pop("dl_edit_pid", None)
+    if not pid or not update.effective_message:
+        return False
+    raw = (update.effective_message.text or "").strip()
+    if raw.startswith("/"):
+        context.user_data["dl_edit_pid"] = pid
+        return False
+    deadline = None if raw in {"-", "بدون", "ندارد"} else parse_deadline(raw)
+    db.set_project_deadline(pid, deadline)
+    p = db.get_project(pid)
+    ok = deadline is not None or raw in {"-", "بدون", "ندارد"}
+    if not ok and p:
+        context.user_data["dl_edit_pid"] = pid  # let them retry
+        await update.effective_message.reply_text(
+            "🤔 نفهمیدم! مثال‌ها: <code>2026-11-01</code> — <code>1405-08-16</code> — <code>10 روز دیگر</code>")
+        return True
+    if p:
+        db.log_activity(None, "project", f"ددلاین «{p['title']}» → {deadline or 'حذف'}")
+    await update.effective_message.reply_text(
+        f"✅ ددلاین: <b>{date_disp(deadline)}</b>",
+        reply_markup=kb.back(f"proj:view:{pid}") if p else None,
+    )
+    return True
+
+
 async def show_deadlines(update: Update, context: ContextTypes.DEFAULT_TYPE,
                          edit: bool = False) -> None:
     rows = []
@@ -141,7 +224,7 @@ async def show_deadlines(update: Update, context: ContextTypes.DEFAULT_TYPE,
     else:
         lines = [texts.DEADLINE_HEADER]
         for p in rows:
-            lines.append(f"📁 <b>{esc(p['title'])}</b>\n   ⏰ {p['deadline']} · {deadline_badge(p['deadline'])}")
+            lines.append(f"📁 <b>{esc(p['title'])}</b>\n   ⏰ {date_disp(p['deadline'])} · {deadline_badge(p['deadline'])}")
         text = "\n".join(lines)
     markup = kb.back("menu:main")
     if edit and update.callback_query:
@@ -245,13 +328,13 @@ async def _confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         f"📌 {esc(d.get('title', '—'))}\n"
         f"{ptype['emoji']} نوع: {ptype['label']}\n"
         f"📝 {esc(d.get('description')) or '—'}\n"
-        f"⏰ ددلاین: {d.get('deadline') or '—'}"
+        f"⏰ ددلاین: {date_disp(d.get('deadline'))}"
     )
     if update.callback_query:
         await update.callback_query.edit_message_text(text, reply_markup=kb.confirm_new_project())
     elif update.effective_message:
         await update.effective_message.reply_text(text, reply_markup=kb.confirm_new_project())
-    return P_DL
+    return P_CONFIRM
 
 
 async def new_project_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -297,6 +380,7 @@ def conversation() -> ConversationHandler:
                 MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_dl_text),
             ],
             DL_WAIT: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_dl_text)],
+            P_CONFIRM: [CallbackQueryHandler(new_project_confirm, pattern=r"^proj:confirm$")],
         },
         fallbacks=[CallbackQueryHandler(new_project_cancel, pattern=r"^proj:cancel$")],
         per_message=False,

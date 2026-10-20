@@ -100,8 +100,11 @@ async def admin_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     elif action == "user":
         uid = int(data[2])
-        u = db.get_user(uid)
+        u = db.get_user_by_id(uid)
         if not u:
+            await query.edit_message_text(
+                "⚠️ عضو پیدا نشد (لیست قدیمی بود) — اینتو ببین:",
+                reply_markup=kb.members_manage(db.list_users()))
             return
         text = (
             f"👤 <b>{esc(u['full_name'])}</b>\n─────────────────────\n"
@@ -114,15 +117,17 @@ async def admin_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     elif action == "setrole":
         uid, role = int(data[2]), data[3]
+        changed = False
         if role in ROLES:
-            u = db.get_user(uid)
+            u = db.get_user_by_id(uid)
             if u:
                 db.set_role(u["tg_id"], role)
                 db.log_activity(user["id"] if user else None, "admin",
                                 f"نقش {u['full_name']} → {ROLES[role]['label']}")
+                changed = True
         users = db.list_users()
-        await query.edit_message_text("✅ نقش عضو تغییر کرد.",
-                                      reply_markup=kb.members_manage(users))
+        msg = "✅ نقش عضو تغییر کرد." if changed else "⚠️ عضو پیدا نشد — لیست تازه رو ببین:"
+        await query.edit_message_text(msg, reply_markup=kb.members_manage(users))
 
     elif action == "archived":
         projects = db.list_projects(archived=1)

@@ -48,9 +48,13 @@ async def cmd_idea(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 
 async def broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """If admin typed a broadcast message, fan it out to all members."""
+    """Free-text dispatcher: pending deadline edit (proj:dlq manual) first,
+    then admin broadcast fan-out."""
     user = user_of(update, context)
     if not user or not update.effective_message:
+        return
+    from bot.handlers.projects import handle_dl_edit_text
+    if await handle_dl_edit_text(update, context):
         return
     if not context.user_data.get("broadcast"):
         return

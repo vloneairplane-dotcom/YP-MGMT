@@ -383,3 +383,6 @@ body {
   .hero { padding: 22px; }
   .shell { padding: 16px 12px 40px; }
 }
+
+/* keep ISO dates/UTC stamps from being mirrored by RTL bidi */
+.nd-when, #updatedAt { unicode-bidi: plaintext; }

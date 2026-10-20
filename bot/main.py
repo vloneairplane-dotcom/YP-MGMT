@@ -75,6 +75,8 @@ def build_app() -> Application:
     app.add_handler(CallbackQueryHandler(projects.project_status_menu, pattern=r"^proj:status:"))
     app.add_handler(CallbackQueryHandler(projects.project_set_status, pattern=r"^proj:set:"))
     app.add_handler(CallbackQueryHandler(projects.project_archive, pattern=r"^proj:archive:"))
+    app.add_handler(CallbackQueryHandler(projects.project_edit_pick, pattern=r"^proj:dlq:"))
+    app.add_handler(CallbackQueryHandler(projects.project_edit_deadline, pattern=r"^proj:dl:"))
     app.add_handler(CallbackQueryHandler(start.menu_router, pattern=r"^menu:"))
 
     # ---- free text (broadcast mode etc.)

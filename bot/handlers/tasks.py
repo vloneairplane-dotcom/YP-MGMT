@@ -11,7 +11,7 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.config import TASK_PRIORITIES, TASK_STATUSES
-from bot.utils import esc, is_manager, parse_deadline, user_of
+from bot.utils import date_disp, esc, is_manager, parse_deadline, user_of
 
 T_TITLE, T_ASSIGN, T_PRIO, T_DL = range(4)
 T_DL_WAIT = 20
@@ -74,7 +74,7 @@ async def task_view(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"📝 {esc(tk['description']) or '—'}\n"
         f"{ts['emoji']} وضعیت: <b>{ts['label']}</b>\n"
         f"{pr['emoji']} اولویت: <b>{pr['label']}</b>\n"
-        f"⏰ ددلاین: {tk['deadline'] or '—'}"
+        f"⏰ ددلاین: {date_disp(tk['deadline'])}"
     )
     user = user_of(update, context)
     await query.edit_message_text(
@@ -208,7 +208,7 @@ async def _task_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         d.get("project_id", 0), d.get("title", "—"), d.get("assignee_id"),
         priority=d.get("priority", "normal"), deadline=d.get("deadline"),
     )
-    assignee = db.get_user(d.get("assignee_id", 0) or 0) if d.get("assignee_id") else None
+    assignee = db.get_user_by_id(d["assignee_id"]) if d.get("assignee_id") else None
     db.log_activity(user["id"], "task",
                     f"تسک «{d.get('title')}» به {assignee['full_name'] if assignee else '—'} داده شد")
     # notify assignee in DM
@@ -216,7 +216,7 @@ async def _task_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         try:
             await context.bot.send_message(
                 assignee["tg_id"],
-                f"🧩 تسک جدید برات ثبت شد!\n📌 {esc(d.get('title'))}\n⏰ {d.get('deadline') or '—'}",
+                f"🧩 تسک جدید برات ثبت شد!\n📌 {esc(d.get('title'))}\n⏰ {date_disp(d.get('deadline'))}",
             )
         except Exception:  # user may have not started the bot
             pass

@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes
 
 from bot import database as db
 from bot.config import TASK_STATUSES
-from bot.utils import days_left, esc
+from bot.utils import days_left, date_disp, esc
 
 
 async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -51,7 +51,7 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
                 f"🧩 <b>یادآور تسک</b>\n"
                 f"📌 {esc(tk['title'])}\n"
                 f"📁 {esc(tk['project_title'])}\n"
-                f"🕓 ددلاین {label}! ({tk['deadline']})\n"
+                f"🕓 ددلاین {label}! ({date_disp(tk['deadline'])})\n"
                 f"وضعیت فعلی: {TASK_STATUSES[tk['status']]['emoji']} {TASK_STATUSES[tk['status']]['label']}"
             )
             if tk["assignee_tg"]:
