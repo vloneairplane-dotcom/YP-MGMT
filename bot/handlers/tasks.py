@@ -11,7 +11,7 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.config import TASK_PRIORITIES, TASK_STATUSES
-from bot.utils import is_manager, parse_deadline, user_of
+from bot.utils import esc, is_manager, parse_deadline, user_of
 
 T_TITLE, T_ASSIGN, T_PRIO, T_DL = range(4)
 T_DL_WAIT = 20
@@ -69,9 +69,9 @@ async def task_view(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     pr = TASK_PRIORITIES[tk["priority"]]
     text = (
         f"🧩 <b>تسک #{tk['id']}</b>\n─────────────────────\n"
-        f"📌 {tk['title']}\n"
-        f"📁 پروژه: {tk['project_title']}\n"
-        f"📝 {tk['description'] or '—'}\n"
+        f"📌 {esc(tk['title'])}\n"
+        f"📁 پروژه: {esc(tk['project_title'])}\n"
+        f"📝 {esc(tk['description']) or '—'}\n"
         f"{ts['emoji']} وضعیت: <b>{ts['label']}</b>\n"
         f"{pr['emoji']} اولویت: <b>{pr['label']}</b>\n"
         f"⏰ ددلاین: {tk['deadline'] or '—'}"
@@ -216,11 +216,11 @@ async def _task_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         try:
             await context.bot.send_message(
                 assignee["tg_id"],
-                f"🧩 تسک جدید برات ثبت شد!\n📌 {d.get('title')}\n⏰ {d.get('deadline') or '—'}",
+                f"🧩 تسک جدید برات ثبت شد!\n📌 {esc(d.get('title'))}\n⏰ {d.get('deadline') or '—'}",
             )
         except Exception:  # user may have not started the bot
             pass
-    msg = f"🎉 تسک «{d.get('title')}» ثبت شد!"
+    msg = f"🎉 تسک «{esc(d.get('title'))}» ثبت شد!"
     if update.callback_query:
         await update.callback_query.edit_message_text(msg, reply_markup=kb.back(f"proj:view:{d.get('project_id')}"))
     elif update.effective_message:

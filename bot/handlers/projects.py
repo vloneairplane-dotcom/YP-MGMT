@@ -11,7 +11,7 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.config import PROJECT_STATUSES, PROJECT_TYPES, STATUS_FLOW
-from bot.utils import (deadline_badge, is_manager, parse_deadline, user_of,
+from bot.utils import (deadline_badge, esc, is_manager, parse_deadline, user_of,
                        progress_bar)
 
 # conversation states
@@ -141,7 +141,7 @@ async def show_deadlines(update: Update, context: ContextTypes.DEFAULT_TYPE,
     else:
         lines = [texts.DEADLINE_HEADER]
         for p in rows:
-            lines.append(f"📁 <b>{p['title']}</b>\n   ⏰ {p['deadline']} · {deadline_badge(p['deadline'])}")
+            lines.append(f"📁 <b>{esc(p['title'])}</b>\n   ⏰ {p['deadline']} · {deadline_badge(p['deadline'])}")
         text = "\n".join(lines)
     markup = kb.back("menu:main")
     if edit and update.callback_query:
@@ -242,9 +242,9 @@ async def _confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     ptype = PROJECT_TYPES.get(d.get("ptype", "other"), {"label": "?", "emoji": "📦"})
     text = (
         "✅ <b>تأیید پروژه</b>\n─────────────────────\n"
-        f"📌 {d.get('title', '—')}\n"
+        f"📌 {esc(d.get('title', '—'))}\n"
         f"{ptype['emoji']} نوع: {ptype['label']}\n"
-        f"📝 {d.get('description') or '—'}\n"
+        f"📝 {esc(d.get('description')) or '—'}\n"
         f"⏰ ددلاین: {d.get('deadline') or '—'}"
     )
     if update.callback_query:
@@ -268,7 +268,7 @@ async def new_project_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
     db.log_activity(user["id"], "project", f"پروژه «{d.get('title')}» ساخته شد")
     await query.edit_message_text(
-        f"🎉 پروژه «{d.get('title')}» ساخته شد!\nحالا براش تسک تعریف کن 👇",
+        f"🎉 پروژه «{esc(d.get('title'))}» ساخته شد!\nحالا براش تسک تعریف کن 👇",
         reply_markup=kb.project_detail(pid, True),
     )
     return ConversationHandler.END

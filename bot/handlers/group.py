@@ -8,7 +8,7 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.services import idea_engine
-from bot.utils import deadline_badge, role_badge, user_of
+from bot.utils import deadline_badge, esc, role_badge, user_of
 
 
 async def cmd_whoami(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -16,7 +16,7 @@ async def cmd_whoami(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None
     if not user or not update.effective_message:
         return
     await update.effective_message.reply_text(
-        f"👤 <b>{user['full_name']}</b>\n{role_badge(user)}",
+        f"👤 <b>{esc(user['full_name'])}</b>\n{role_badge(user)}",
     )
 
 
@@ -63,7 +63,7 @@ async def broadcast_text(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if not u["tg_id"]:
             continue
         try:
-            await context.bot.send_message(u["tg_id"], f"📣 <b>اعلان تیم</b>\n─────────────────────\n{text}")
+            await context.bot.send_message(u["tg_id"], f"📣 <b>اعلان تیم</b>\n─────────────────────\n{esc(text)}")
             sent += 1
         except Exception:
             pass

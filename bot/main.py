@@ -6,8 +6,9 @@ import logging
 import os
 import warnings
 
+from telegram.constants import ParseMode
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
-                          MessageHandler, filters)
+                          Defaults, MessageHandler, filters)
 from telegram.request import HTTPXRequest
 from telegram.warnings import PTBUserWarning
 
@@ -34,7 +35,8 @@ def build_app() -> Application:
     db.init_db()
     db.seed_demo()
 
-    builder = Application.builder().token(BOT_TOKEN)
+    builder = (Application.builder().token(BOT_TOKEN)
+               .defaults(Defaults(parse_mode=ParseMode.HTML)))
     # Optional proxy for servers that can't reach api.telegram.org directly
     proxy = os.getenv("TELEGRAM_PROXY", "").strip()
     if proxy:
@@ -53,6 +55,8 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("tasks", group.cmd_tasks))
     app.add_handler(CommandHandler("deadline", group.cmd_deadline))
     app.add_handler(CommandHandler("idea", group.cmd_idea))
+    app.add_handler(CommandHandler("backup", admin.cmd_backup))
+    app.add_handler(CommandHandler("wipe", admin.cmd_wipe))
 
     # ---- conversations (create project / task)
     app.add_handler(projects.conversation())
@@ -75,6 +79,12 @@ def build_app() -> Application:
 
     # ---- free text (broadcast mode etc.)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, group.broadcast_text))
+
+    # ---- graceful error logging (e.g. HTML parse hiccups from odd user text)
+    async def _on_error(update, context):
+        logger.warning("Update failed: %s", context.error)
+
+    app.add_error_handler(_on_error)
 
     # ---- deadline reminders every 30 minutes
     if app.job_queue:

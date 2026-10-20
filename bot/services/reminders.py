@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes
 
 from bot import database as db
 from bot.config import TASK_STATUSES
-from bot.utils import days_left
+from bot.utils import days_left, esc
 
 
 async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -25,7 +25,7 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
                 continue
             msg = (
                 f"⏰ <b>یادآور ددلاین پروژه</b>\n"
-                f"📁 {p['title']}\n"
+                f"📁 {esc(p['title'])}\n"
                 f"🕓 {p['deadline']} · ددلاین {label}!"
             )
             chat_id = p["chat_id"] or context.bot_data.get("group_chat_id")
@@ -49,8 +49,8 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
                 continue
             msg = (
                 f"🧩 <b>یادآور تسک</b>\n"
-                f"📌 {tk['title']}\n"
-                f"📁 {tk['project_title']}\n"
+                f"📌 {esc(tk['title'])}\n"
+                f"📁 {esc(tk['project_title'])}\n"
                 f"🕓 ددلاین {label}! ({tk['deadline']})\n"
                 f"وضعیت فعلی: {TASK_STATUSES[tk['status']]['emoji']} {TASK_STATUSES[tk['status']]['label']}"
             )

@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from bot.config import DB_PATH
+from bot.config import DB_PATH, DEMO_SEED
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -315,8 +315,23 @@ def stats() -> dict:
         }
 
 
+def wipe_data() -> int:
+    """Delete all projects/tasks/ideas/activity/reminders (members & roles stay)."""
+    with get_db() as db:
+        n = db.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+        for table in ("tasks", "projects", "ideas", "activity", "reminders"):
+            db.execute(f"DELETE FROM {table}")
+    return n
+
+
 def seed_demo() -> None:
-    """Insert realistic demo data so the glass dashboard looks alive."""
+    """Insert realistic demo data so the glass dashboard looks alive.
+
+    Opt-in only (DEMO_SEED=1) — a fresh production board starts empty
+    so the team can build it themselves from scratch.
+    """
+    if not DEMO_SEED:
+        return
     with get_db() as db:
         if db.execute("SELECT COUNT(*) FROM projects").fetchone()[0] > 0:
             return

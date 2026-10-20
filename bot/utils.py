@@ -2,12 +2,18 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from html import escape as _html_escape
 
 from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot import database as db
 from bot.config import MANAGER_ROLES, ROLES
+
+
+def esc(value) -> str:
+    """HTML-escape user-generated text before embedding in HTML messages."""
+    return _html_escape(str(value or ""), quote=False)
 
 
 def user_of(update: Update, context: ContextTypes.DEFAULT_TYPE) -> dict | None:

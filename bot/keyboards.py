@@ -212,7 +212,17 @@ def admin_menu() -> InlineKeyboardMarkup:
          InlineKeyboardButton("👥 مدیریت اعضا", callback_data="admin:members")],
         [InlineKeyboardButton("🗄 پروژه‌های آرشیو", callback_data="admin:archived"),
          InlineKeyboardButton("📣 اعلان همگانی", callback_data="admin:broadcast")],
+        [InlineKeyboardButton("💾 بکاپ دیتابیس", callback_data="admin:backup"),
+         InlineKeyboardButton("🧹 پاک‌سازی بورد", callback_data="admin:wipe")],
         [InlineKeyboardButton(texts.BACK, callback_data="menu:main")],
+    ])
+
+
+def wipe_confirm() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("💾 اول بکاپ بگیر", callback_data="admin:backup"),
+         InlineKeyboardButton("🧹 بله، پاک کن", callback_data="admin:wipe_go")],
+        [InlineKeyboardButton(texts.BACK, callback_data="menu:admin")],
     ])
 
 

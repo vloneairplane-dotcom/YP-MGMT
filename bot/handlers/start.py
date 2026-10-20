@@ -7,7 +7,7 @@ from telegram.ext import ContextTypes
 from bot import database as db
 from bot import keyboards as kb
 from bot import texts
-from bot.utils import role_badge, user_of
+from bot.utils import esc, role_badge, user_of
 
 
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -17,7 +17,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     first = user["full_name"].split(" ")[0]
     if not user.get("role"):
         await update.effective_message.reply_text(
-            texts.WELCOME.format(name=first, brand=texts.BRAND),
+            texts.WELCOME.format(name=esc(first), brand=texts.BRAND),
             reply_markup=kb.role_pick(),
         )
         return
@@ -32,7 +32,7 @@ async def show_main_menu(update: Update, context: ContextTypes.DEFAULT_TYPE,
     s = db.stats()
     first = user["full_name"].split(" ")[0]
     text = texts.MAIN_MENU.format(
-        brand=texts.BRAND_FA, name=first, role_badge=role_badge(user),
+        brand=texts.BRAND_FA, name=esc(first), role_badge=role_badge(user),
         projects=s["projects"], tasks=s["tasks"], tasks_done=s["tasks_done"],
         members=s["members"], ideas=s["ideas"],
     )
@@ -58,7 +58,7 @@ async def menu_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
         await query.edit_message_text(texts.HELP, reply_markup=kb.back())
     elif action == "role":
         user = user_of(update, context)
-        name = user["full_name"] if user else "رفیق"
+        name = esc(user["full_name"]) if user else "رفیق"
         await query.edit_message_text(
             texts.role_pick_text(name) + "\n\n" + texts.ROLES_DESC,
             reply_markup=kb.role_pick(),

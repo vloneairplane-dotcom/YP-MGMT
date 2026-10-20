@@ -14,6 +14,8 @@ ADMIN_IDS: set[int] = {
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID") or 0) or None
 # Render (and similar PaaS) inject PORT — honor it so the proxy can reach us
 DASH_PORT = int(os.getenv("PORT") or os.getenv("DASH_PORT", "8000"))
+DEMO_SEED = os.getenv("DEMO_SEED", "0").strip().lower() in {"1", "true", "yes"}
+
 DB_PATH = BASE_DIR / os.getenv("DB_PATH", "data/yp_mgmt.db")
 
 # ---------- Roles ----------

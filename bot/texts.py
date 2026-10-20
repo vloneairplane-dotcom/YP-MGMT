@@ -5,6 +5,7 @@ from datetime import datetime
 
 from bot.config import (IDEA_CATEGORIES, PROJECT_STATUSES, PROJECT_TYPES,
                         ROLES, TASK_PRIORITIES, TASK_STATUSES)
+from bot.utils import esc
 
 BRAND = "Ye Pesare · Management"
 BRAND_FA = "یه پسر | پنل مدیریت تیم"
@@ -76,7 +77,7 @@ def project_card_short(p) -> str:
     s = PROJECT_STATUSES.get(p["status"], {"label": "?", "emoji": "❓"})
     dl = f"⏰ {p['deadline']}" if p["deadline"] else "⏰ بدون ددلاین"
     return (
-        f"{t['emoji']} <b>{p['title']}</b>\n"
+        f"{t['emoji']} <b>{esc(p['title'])}</b>\n"
         f"   {s['emoji']} {s['label']}  |  {dl}"
     )
 
@@ -84,10 +85,10 @@ def project_card_short(p) -> str:
 def project_detail(p, tasks) -> str:
     t = PROJECT_TYPES.get(p["ptype"], {"label": "?", "emoji": "📦"})
     s = PROJECT_STATUSES.get(p["status"], {"label": "?", "emoji": "❓"})
-    desc = p["description"] or "—"
+    desc = esc(p["description"]) or "—"
     dl = p["deadline"] or "—"
     lines = [
-        f"{t['emoji']} <b>{p['title']}</b>",
+        f"{t['emoji']} <b>{esc(p['title'])}</b>",
         "─────────────────────",
         f"📄 {desc}",
         f"{s['emoji']} وضعیت: <b>{s['label']}</b>",
@@ -100,9 +101,9 @@ def project_detail(p, tasks) -> str:
     for tk in tasks:
         ts = TASK_STATUSES.get(tk["status"], {"label": "?", "emoji": "❓"})
         pr = TASK_PRIORITIES.get(tk["priority"], {"label": "?", "emoji": "🟡"})
-        who = tk["assignee_name"] or "—"
+        who = esc(tk["assignee_name"]) or "—"
         lines.append(
-            f"   {ts['emoji']} <b>#{tk['id']}</b> {tk['title']}\n"
+            f"   {ts['emoji']} <b>#{tk['id']}</b> {esc(tk['title'])}\n"
             f"      👤 {who} | {pr['emoji']} {pr['label']} | ⏰ {tk['deadline'] or '—'}"
         )
     return "\n".join(lines)
@@ -112,8 +113,8 @@ def task_line(tk) -> str:
     ts = TASK_STATUSES.get(tk["status"], {"label": "?", "emoji": "❓"})
     pr = TASK_PRIORITIES.get(tk["priority"], {"label": "?", "emoji": "🟡"})
     return (
-        f"{ts['emoji']} <b>#{tk['id']}</b> {tk['title']}\n"
-        f"   📁 {tk['project_title']} | 👤 {tk['assignee_name'] or '—'} | "
+        f"{ts['emoji']} <b>#{tk['id']}</b> {esc(tk['title'])}\n"
+        f"   📁 {esc(tk['project_title'])} | 👤 {esc(tk['assignee_name']) or '—'} | "
         f"{pr['emoji']} {pr['label']} | ⏰ {tk['deadline'] or '—'}"
     )
 
