@@ -12,7 +12,8 @@ ADMIN_IDS: set[int] = {
     int(x) for x in os.getenv("ADMIN_IDS", "").replace(" ", "").split(",") if x
 }
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID") or 0) or None
-DASH_PORT = int(os.getenv("DASH_PORT", "8000"))
+# Render (and similar PaaS) inject PORT — honor it so the proxy can reach us
+DASH_PORT = int(os.getenv("PORT") or os.getenv("DASH_PORT", "8000"))
 DB_PATH = BASE_DIR / os.getenv("DB_PATH", "data/yp_mgmt.db")
 
 # ---------- Roles ----------
