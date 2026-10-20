@@ -108,7 +108,72 @@ YP-MGMT/
 - دیتابیس: SQLite در `data/yp_mgmt.db` (خودکار ساخته می‌شود)
 - داده‌ی دمو برای تست داشبورد در اولین اجرا ساخته می‌شود
 - یادآور ددلاین هر ۳۰ دقیقه چک می‌شود
-- برای استقرار روی سرور: `python3 run.py` داخل `tmux`/`systemd`
+- اگر سرور به `api.telegram.org` دسترسی نداره (مثلاً سرور داخل ایران): در `.env` مقدار `TELEGRAM_PROXY` رو مثل `socks5://user:pass@host:port` تنظیم کن
+
+---
+
+## 💰 اجرای کاملاً رایگان
+
+> ربات تلگرام باید **همیشه روشن** باشه (پروسه‌ی دائمی). گزینه‌های واقعاً رایگان:
+
+### 🥇 گزینه ۱ — Oracle Cloud «Always Free» (بهترین، همیشه‌رایگان)
+یه سرور مجازی واقعی ۲۴/۷ — بدون هزینه‌ی ماهیانه (ثبت‌نام با کارت بین‌المللی فقط برای تأیید هویت؛ هیچ شارژی نمی‌شه).
+
+۱) توی [oracle.com/cloud/free](https://www.oracle.com/cloud/free/) ثبت‌نام کن
+۲) یک **Compute Instance** بساز:
+   - Image: **Ubuntu 24.04**
+   - Shape: **VM.Standard.A1.Flex** با **2 OCPU / 12 GB RAM** (همون سهمیه‌ی رایگان)
+   - اگر پیام `Out of host capacity` دادی، ریجن/AD دیگه رو امتحان کن یا از **VM.Standard.E2.1.Micro** (AMD) استفاده کن
+۳) توی **Security List** فقط پورت `8000` رو برای داشبورد باز کن (ربات اصلاً پورت باز نمی‌خواد — خودش Polling می‌زنه)
+۴) با SSH وصل شو:
+```bash
+sudo apt update && sudo apt install -y python3-venv git
+git clone https://github.com/vloneairplane-dotcom/YP-MGMT.git /opt/YP-MGMT
+cd /opt/YP-MGMT
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+cp .env.example .env && nano .env        # توکن ربات + آیدی ادمین
+```
+۵) سرویس رو دائمی کن (با هر ری‌استارت سرور بالا میاد):
+```bash
+sudo cp deploy/yp-mgmt.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now yp-mgmt
+sudo systemctl status yp-mgmt            # باید active (running) باشه
+```
+✅ تموم! ربات آنلاینه → داشبورد هم `http://IP-سرور:8000`
+
+> ⚠️ **ترفند مهم:** اوراکل ماشین‌های بیکار (کمتر از ۲۰٪ مصرف برای ۷ روز) رو جمع می‌کنه.
+> راه حل رایگان و قطعی: اکانت رو به **Pay As You Go** ارتقا بده (بدون هزینه تا سقف رایگان، هیچ شارژی نمیشه)
+> ولی دیگه از لیست جمع‌کردن ماشین‌های بیکار معاف می‌شی. (پولینگ ربات + یادآورها هم خودش فعالیت ایجاد می‌کنه)
+
+### 🥈 گزینه ۲ — Render (بدون کارت، از GitHub)
+۱) توی [render.com](https://render.com) با گیت‌هاب لاگین کن → **New → Web Service** → ریپو `YP-MGMT`
+۲) Docker رو انتخاب کن (خودکار `Dockerfile` رو می‌بینه)
+۳) توی **Environment** متغیرهای `.env` رو اضافه کن (`BOT_TOKEN`, `ADMIN_IDS`)
+۴) پلن **Free** رو بزن → Deploy
+۵) 🎯 ترفند بیدار نگه‌داشتن: سرویس رایگان بعد از ۱۵ دقیقه بی‌کاری می‌خوابه.
+   توی [UptimeRobot](https://uptimerobot.com) (رایگان) یک **HTTP Monitor** بساز که هر ۵ دقیقه
+   آدرس داشبوردت رو پینگ کنه → سرویس ۲۴/۷ بیدار می‌مونه. (بدون پینگ هم ربات کار می‌کنه ولی با تأخیر)
+
+### 🥉 گزینه ۳ — گوشی/کامپیوتر قدیمی + Termux (بدون سرور، بدون کارت)
+۱) [Termux](https://f-droid.org/packages/com.termux/) رو از F-Droid نصب کن
+```bash
+pkg install python git
+git clone https://github.com/vloneairplane-dotcom/YP-MGMT.git
+cd YP-MGMT && pip install -r requirements.txt
+cp .env.example .env && nano .env
+termux-wake-lock          # گوشی نخوابه
+python3 run.py
+```
+۲) گوشی رو به شارژر و وای‌فای وصل نگه‌دار — همین! 📱
+
+### 🔁 روش‌های دیگه
+| سرویس | شرایط | توضیح |
+|---|---|---|
+| **Google Cloud** e2-micro | همیشه‌رایگان، نیاز به کارت | مثل اوراکل ولی سبک‌تر (`us-west1`) |
+| **Railway / Fly.io** | اعتبار اولیه رایگان | راحت‌ترین دیپلوی، ولی دائمی رایگان نیست |
+| **Docker روی هر VPS** | — | `docker compose up -d` و تمام 🐳 |
+
 
 ---
 

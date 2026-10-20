@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           MessageHandler, filters)
+from telegram.request import HTTPXRequest
 
 from bot import database as db
 from bot.config import ADMIN_IDS, BOT_TOKEN, DASH_PORT, GROUP_CHAT_ID
@@ -25,9 +27,13 @@ def build_app() -> Application:
     db.init_db()
     db.seed_demo()
 
-    app = (Application.builder()
-           .token(BOT_TOKEN)
-           .build())
+    builder = Application.builder().token(BOT_TOKEN)
+    # Optional proxy for servers that can't reach api.telegram.org directly
+    proxy = os.getenv("TELEGRAM_PROXY", "").strip()
+    if proxy:
+        builder = builder.request(HTTPXRequest(proxy_url=proxy, connection_pool_size=8))
+        logger.info("Using TELEGRAM proxy for Telegram API")
+    app = builder.build()
 
     app.bot_data["admin_ids"] = ADMIN_IDS
     app.bot_data["group_chat_id"] = GROUP_CHAT_ID
