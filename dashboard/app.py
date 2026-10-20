@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from bot import database as db
@@ -113,6 +113,17 @@ def api_dashboard() -> dict:
 @app.get("/", response_class=HTMLResponse)
 def index() -> HTMLResponse:
     return HTMLResponse((BASE / "templates" / "index.html").read_text(encoding="utf-8"))
+
+
+@app.head("/", include_in_schema=False)
+def index_head() -> Response:
+    """Accept HEAD probes (Render/UptimeRobot health checks)."""
+    return Response(status_code=200, media_type="text/html")
+
+
+@app.api_route("/api/health", methods=["GET", "HEAD"], response_class=JSONResponse)
+def health() -> dict:
+    return {"status": "ok", "service": "ye-pesare-mgmt"}
 
 
 def main() -> None:

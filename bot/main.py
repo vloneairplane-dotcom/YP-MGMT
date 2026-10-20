@@ -1,12 +1,15 @@
 """Bot entrypoint — wires handlers, jobs and run polling."""
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
+import warnings
 
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
                           MessageHandler, filters)
 from telegram.request import HTTPXRequest
+from telegram.warnings import PTBUserWarning
 
 from bot import database as db
 from bot.config import ADMIN_IDS, BOT_TOKEN, DASH_PORT, GROUP_CHAT_ID
@@ -17,7 +20,11 @@ logging.basicConfig(
     format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
     level=logging.INFO,
 )
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger("yp-mgmt")
+
+# mixed message/callback conversations intentionally use per_message=False
+warnings.filterwarnings("ignore", message="If 'per_message=False'", category=PTBUserWarning)
 
 
 def build_app() -> Application:
@@ -31,7 +38,7 @@ def build_app() -> Application:
     # Optional proxy for servers that can't reach api.telegram.org directly
     proxy = os.getenv("TELEGRAM_PROXY", "").strip()
     if proxy:
-        builder = builder.request(HTTPXRequest(proxy_url=proxy, connection_pool_size=8))
+        builder = builder.request(HTTPXRequest(proxy=proxy))
         logger.info("Using TELEGRAM proxy for Telegram API")
     app = builder.build()
 
@@ -80,6 +87,12 @@ def build_app() -> Application:
 def main() -> None:
     app = build_app()
     logger.info("Starting polling …")
+    # Python 3.12+/3.14 no longer auto-creates a loop via asyncio.get_event_loop();
+    # make sure one exists so run_polling's internals never crash.
+    try:
+        asyncio.get_event_loop()
+    except RuntimeError:
+        asyncio.set_event_loop(asyncio.new_event_loop())
     app.run_polling(allowed_updates=["message", "callback_query"])
 
 
