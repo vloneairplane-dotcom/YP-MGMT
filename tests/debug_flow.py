@@ -181,7 +181,7 @@ def walk_create_project(conv):
 
 def walk_tasks_create(conv_p, pid):
     cx = mk_ctx()
-    conv = tasks.conversation()
+    conv = conv_p  # merged wizard conversation from main.wizard_conversation()
     state = None
     db_rows_before = None
     steps = [
@@ -369,8 +369,10 @@ def audit_keyboards():
 
 def main():
     print("== conversation walk: create project ==")
-    conv = projects.conversation()
+    from bot.main import wizard_conversation
+    conv = wizard_conversation()
     ok("wiring: P_CONFIRM state registered", projects.P_CONFIRM in conv.states)
+    ok("wiring: merged conv also carries task states", tasks.T_TITLE in conv.states and getattr(conv, "allow_reentry", False))
     pid = None
     cx = mk_ctx()
     p = walk_create_project(conv)

@@ -355,33 +355,3 @@ async def new_project_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=kb.project_detail(pid, True),
     )
     return ConversationHandler.END
-
-
-async def new_project_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    query = update.callback_query
-    user = user_of(update, context)
-    if user:
-        _draft.pop(user["tg_id"], None)
-    if query:
-        await query.answer()
-        await query.edit_message_text(texts.CANCELLED, reply_markup=kb.back("menu:main"))
-    return ConversationHandler.END
-
-
-def conversation() -> ConversationHandler:
-    return ConversationHandler(
-        entry_points=[CallbackQueryHandler(new_project_start, pattern=r"^proj:new$")],
-        states={
-            P_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_title)],
-            P_TYPE: [CallbackQueryHandler(new_project_type, pattern=r"^ptype:")],
-            P_DESC: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_desc)],
-            P_DL: [
-                CallbackQueryHandler(new_project_dl_btn, pattern=r"^dl:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_dl_text),
-            ],
-            DL_WAIT: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_project_dl_text)],
-            P_CONFIRM: [CallbackQueryHandler(new_project_confirm, pattern=r"^proj:confirm$")],
-        },
-        fallbacks=[CallbackQueryHandler(new_project_cancel, pattern=r"^proj:cancel$")],
-        per_message=False,
-    )

@@ -13,8 +13,11 @@ from bot import texts
 from bot.config import TASK_PRIORITIES, TASK_STATUSES
 from bot.utils import date_disp, esc, is_manager, parse_deadline, user_of
 
-T_TITLE, T_ASSIGN, T_PRIO, T_DL = range(4)
-T_DL_WAIT = 20
+# conversation states (offset from projects' range so BOTH flows can share
+# one merged ConversationHandler — see bot/main.py: a user can only have one
+# active wizard at a time, and re-entry always works)
+T_TITLE, T_ASSIGN, T_PRIO, T_DL = range(10, 14)
+T_DL_WAIT = 14
 
 _tdraft: dict[int, dict] = {}
 
@@ -227,32 +230,3 @@ async def _task_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
         await update.effective_message.reply_text(msg, reply_markup=kb.back(f"proj:view:{d.get('project_id')}"))
     _ = tid
     return ConversationHandler.END
-
-
-async def new_task_cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user = user_of(update, context)
-    if user:
-        _tdraft.pop(user["tg_id"], None)
-    query = update.callback_query
-    if query:
-        await query.answer()
-        await query.edit_message_text(texts.CANCELLED, reply_markup=kb.back("menu:main"))
-    return ConversationHandler.END
-
-
-def conversation() -> ConversationHandler:
-    return ConversationHandler(
-        entry_points=[CallbackQueryHandler(new_task_start, pattern=r"^task:new:\d+$")],
-        states={
-            T_TITLE: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_task_title)],
-            T_ASSIGN: [CallbackQueryHandler(new_task_assign, pattern=r"^task:assign:")],
-            T_PRIO: [CallbackQueryHandler(new_task_prio, pattern=r"^task:prio:")],
-            T_DL: [
-                CallbackQueryHandler(new_task_dl_btn, pattern=r"^dl:"),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, new_task_dl_text),
-            ],
-            T_DL_WAIT: [MessageHandler(filters.TEXT & ~filters.COMMAND, new_task_dl_text)],
-        },
-        fallbacks=[CallbackQueryHandler(new_task_cancel, pattern=r"^proj:cancel$")],
-        per_message=False,
-    )

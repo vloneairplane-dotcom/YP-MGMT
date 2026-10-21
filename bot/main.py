@@ -8,14 +8,18 @@ import warnings
 
 from telegram.constants import ParseMode
 from telegram.ext import (Application, CallbackQueryHandler, CommandHandler,
-                          Defaults, MessageHandler, filters)
+                          ConversationHandler, Defaults, MessageHandler,
+                          filters)
 from telegram.request import HTTPXRequest
 from telegram.warnings import PTBUserWarning
 
 from bot import database as db
+from bot import keyboards as kb
+from bot import texts
 from bot.config import ADMIN_IDS, BOT_TOKEN, DASH_PORT, GROUP_CHAT_ID
 from bot.handlers import admin, group, ideas, projects, roles, start, tasks
 from bot.services.reminders import check_deadlines
+from bot.utils import user_of
 
 logging.basicConfig(
     format="%(asctime)s | %(name)s | %(levelname)s | %(message)s",
@@ -26,6 +30,64 @@ logger = logging.getLogger("yp-mgmt")
 
 # mixed message/callback conversations intentionally use per_message=False
 warnings.filterwarnings("ignore", message="If 'per_message=False'", category=PTBUserWarning)
+
+
+async def _wizard_cancel(update, context) -> int:
+    """proj:cancel — ends whichever wizard is active and clears both drafts."""
+    from bot.handlers import projects as _p
+    from bot.handlers import tasks as _t
+    user = user_of(update, context)
+    if user:
+        _p._draft.pop(user["tg_id"], None)
+        _t._tdraft.pop(user["tg_id"], None)
+    query = update.callback_query
+    if query:
+        await query.answer()
+        await query.edit_message_text(texts.CANCELLED, reply_markup=kb.back("menu:main"))
+    return ConversationHandler.END
+
+
+def wizard_conversation() -> ConversationHandler:
+    """ONE merged conversation for both wizards (create-project + create-task).
+
+    Why merged: with two separate ConversationHandlers a user could get stuck in
+    one wizard — PTB skips entry_points while a conversation is active, so the
+    second tap on "➕ تسک جدید" was silently dropped forever (the reported bug).
+    A single handler means one active flow per user, unique state ids
+    (task states are 10+), and allow_reentry=True lets tapping any wizard
+    button restart the flow cleanly instead of dying silently.
+    """
+    from bot.handlers import projects as _p
+    from bot.handlers import tasks as _t
+
+    text_any = filters.TEXT & ~filters.COMMAND
+    return ConversationHandler(
+        name="wizards",
+        entry_points=[
+            CallbackQueryHandler(_p.new_project_start, pattern=r"^proj:new$"),
+            CallbackQueryHandler(_t.new_task_start, pattern=r"^task:new:\d+$"),
+        ],
+        states={
+            # ---- project wizard
+            _p.P_TITLE: [MessageHandler(text_any, _p.new_project_title)],
+            _p.P_TYPE: [CallbackQueryHandler(_p.new_project_type, pattern=r"^ptype:")],
+            _p.P_DESC: [MessageHandler(text_any, _p.new_project_desc)],
+            _p.P_DL: [CallbackQueryHandler(_p.new_project_dl_btn, pattern=r"^dl:"),
+                      MessageHandler(text_any, _p.new_project_dl_text)],
+            _p.DL_WAIT: [MessageHandler(text_any, _p.new_project_dl_text)],
+            _p.P_CONFIRM: [CallbackQueryHandler(_p.new_project_confirm, pattern=r"^proj:confirm$")],
+            # ---- task wizard
+            _t.T_TITLE: [MessageHandler(text_any, _t.new_task_title)],
+            _t.T_ASSIGN: [CallbackQueryHandler(_t.new_task_assign, pattern=r"^task:assign:")],
+            _t.T_PRIO: [CallbackQueryHandler(_t.new_task_prio, pattern=r"^task:prio:")],
+            _t.T_DL: [CallbackQueryHandler(_t.new_task_dl_btn, pattern=r"^dl:"),
+                      MessageHandler(text_any, _t.new_task_dl_text)],
+            _t.T_DL_WAIT: [MessageHandler(text_any, _t.new_task_dl_text)],
+        },
+        fallbacks=[CallbackQueryHandler(_wizard_cancel, pattern=r"^proj:cancel$")],
+        per_message=False,
+        allow_reentry=True,
+    )
 
 
 def build_app() -> Application:
@@ -58,9 +120,8 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("backup", admin.cmd_backup))
     app.add_handler(CommandHandler("wipe", admin.cmd_wipe))
 
-    # ---- conversations (create project / task)
-    app.add_handler(projects.conversation())
-    app.add_handler(tasks.conversation())
+    # ---- wizards: ONE merged conversation for project+task flows
+    app.add_handler(wizard_conversation())
 
     # ---- callback routers (order matters: more specific first)
     app.add_handler(CallbackQueryHandler(tasks.task_set_status, pattern=r"^task:st:"))
@@ -81,6 +142,16 @@ def build_app() -> Application:
 
     # ---- free text (broadcast mode etc.)
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, group.broadcast_text))
+
+    # ---- catch-all: a callback no handler matched (e.g. a stale button pressed
+    # after a re-deploy wiped conversation state) — tell the user, never silence
+    async def _stale_cb(update, context):
+        query = update.callback_query
+        if query:
+            await query.answer("این دکمه منقضی شده 🕳️ — با /start منوی تازه رو باز کن",
+                               show_alert=True)
+
+    app.add_handler(CallbackQueryHandler(_stale_cb))
 
     # ---- graceful error logging (e.g. HTML parse hiccups from odd user text)
     async def _on_error(update, context):
