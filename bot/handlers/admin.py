@@ -1,7 +1,12 @@
 """Admin panel + team view handlers."""
 from __future__ import annotations
 
+import logging
+import os
+import shutil
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 from telegram import Update
 from telegram.ext import ContextTypes
@@ -11,6 +16,10 @@ from bot import keyboards as kb
 from bot import texts
 from bot.config import DB_PATH, ROLES
 from bot.utils import esc, is_manager, role_badge, user_of
+
+logger = logging.getLogger("yp-mgmt")
+MAX_RESTORE_BYTES = 20 * 1024 * 1024
+REQUIRED_TABLES = {"users", "projects", "tasks"}
 
 
 async def cmd_backup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -37,6 +46,81 @@ async def cmd_wipe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "اعضا و نقش‌ها دست‌نخورده می‌مونن.\n\n"
         "💡 پیشنهاد: اول با /backup بکاپ بگیر.",
         reply_markup=kb.wipe_confirm())
+
+
+async def cmd_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/restore — arm the bot to accept the next backup file (.db) from a manager."""
+    user = user_of(update, context)
+    if not is_manager(user) or not update.effective_message:
+        return
+    context.user_data["restore_pending"] = True
+    await update.effective_message.reply_text(
+        "📦 <b>حالت بازگردانی فعال شد</b>\n─────────────────────\n"
+        "فایل بکاپ (`.db`) که با /backup گرفتی رو همین‌جا بفرست.\n"
+        "اول سالم بودنش چک می‌شه، بعد جایگزین دیتابیس فعال می‌شه.\n"
+        "⚠️ دیتای فعلی با نام `.pre-restore` نگه داشته می‌شه.")
+
+
+async def restore_doc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Incoming document handler: restores a validated SQLite backup file."""
+    user = user_of(update, context)
+    msg = update.effective_message
+    if not user or not msg or not msg.document or not is_manager(user):
+        return
+    if not context.user_data.get("restore_pending"):
+        return  # bot is not expecting a file — ignore silently
+    context.user_data["restore_pending"] = False
+
+    doc = msg.document
+    if doc.file_size and doc.file_size > MAX_RESTORE_BYTES:
+        await msg.reply_text(f"❌ فایل بیشتر از {MAX_RESTORE_BYTES // (1024 * 1024)} مگابایته — با /backup جدید بگیر.")
+        return
+
+    tmp = Path(str(DB_PATH) + ".incoming")
+    try:
+        tg_file = await context.bot.get_file(doc.file_id)
+        await tg_file.download_to_drive(custom_path=str(tmp))
+
+        # validate BEFORE touching the live database
+        try:
+            con = sqlite3.connect(tmp)
+            try:
+                integrity = con.execute("PRAGMA integrity_check").fetchone()[0]
+                tables = {r[0] for r in con.execute(
+                    "SELECT name FROM sqlite_master WHERE type='table'")}
+            finally:
+                con.close()
+        except sqlite3.Error as exc:
+            integrity, tables = f"خطا: {exc}", set()
+        if integrity != "ok" or not REQUIRED_TABLES <= tables:
+            os.remove(tmp)
+            await msg.reply_text(
+                f"❌ فایل معتبر نیست (integrity: {esc(integrity)}).\n"
+                "مطمئن شو همون بکاپی هست که خود ربات فرستاده.")
+            return
+
+        Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
+        if Path(DB_PATH).exists():
+            shutil.copy2(DB_PATH, str(DB_PATH) + ".pre-restore")
+        os.replace(tmp, DB_PATH)
+        for side in (str(DB_PATH) + "-wal", str(DB_PATH) + "-shm"):
+            if os.path.exists(side):
+                os.remove(side)
+
+        s = db.stats()
+        await msg.reply_text(
+            "✅ <b>بکاپ بازگردانی شد!</b>\n─────────────────────\n"
+            f"📁 پروژه: <b>{s['projects']}</b> · 🧩 تسک: <b>{s['tasks']}</b> · "
+            f"👥 عضو: <b>{s['members']}</b>\n"
+            "نسخه‌ی قبلی در `data/…db.pre-restore` حفظ شد.")
+    except Exception as e:  # noqa: BLE001 — report, never leave junk
+        logger.exception("restore failed")
+        if tmp.exists():
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
+        await msg.reply_text(f"❌ خطا در بازگردانی: {esc(e)}")
 
 
 async def show_admin(update: Update, context: ContextTypes.DEFAULT_TYPE,

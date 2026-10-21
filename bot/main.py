@@ -119,6 +119,7 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("idea", group.cmd_idea))
     app.add_handler(CommandHandler("backup", admin.cmd_backup))
     app.add_handler(CommandHandler("wipe", admin.cmd_wipe))
+    app.add_handler(CommandHandler("restore", admin.cmd_restore))
 
     # ---- wizards: ONE merged conversation for project+task flows
     app.add_handler(wizard_conversation())
@@ -140,8 +141,9 @@ def build_app() -> Application:
     app.add_handler(CallbackQueryHandler(projects.project_edit_deadline, pattern=r"^proj:dl:"))
     app.add_handler(CallbackQueryHandler(start.menu_router, pattern=r"^menu:"))
 
-    # ---- free text (broadcast mode etc.)
+    # ---- free text (broadcast mode etc.) + backup restore files
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, group.broadcast_text))
+    app.add_handler(MessageHandler(filters.Document.ALL, admin.restore_doc))
 
     # ---- catch-all: a callback no handler matched (e.g. a stale button pressed
     # after a re-deploy wiped conversation state) — tell the user, never silence
