@@ -14,6 +14,7 @@ from unittest.mock import AsyncMock, MagicMock
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["BOT_TOKEN"] = "TEST:FAKE-TOKEN"
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "test.db")
+os.environ["ADMIN_IDS"] = "999"
 
 from telegram.ext import CallbackQueryHandler, ConversationHandler, MessageHandler  # noqa: E402
 

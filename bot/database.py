@@ -334,6 +334,14 @@ def wipe_data() -> int:
     return n
 
 
+def wipe_all() -> None:
+    """Nuclear reset — every table including members and roles."""
+    with get_db() as db:
+        for table in ("tasks", "projects", "ideas", "activity", "reminders", "users"):
+            db.execute(f"DELETE FROM {table}")
+        db.execute("DELETE FROM sqlite_sequence")
+
+
 def seed_demo() -> None:
     """Insert realistic demo data so the glass dashboard looks alive.
 

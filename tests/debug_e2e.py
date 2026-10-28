@@ -13,6 +13,7 @@ from datetime import datetime
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["BOT_TOKEN"] = "999:TEST-E2E"
 os.environ["DB_PATH"] = os.path.join(tempfile.mkdtemp(), "e2e.db")
+os.environ["ADMIN_IDS"] = "999"
 
 from telegram import (CallbackQuery, Chat, Message, Update,  # noqa: E402
                       User as TGUser)
@@ -70,11 +71,12 @@ def upd_cb(bot, data: str) -> Update:
 
 
 def upd_text(bot, text: str) -> Update:
-    return Update.de_json({
-        "update_id": Ids.next(),
-        "message": {"message_id": Ids.next(), "date": 1760000000,
-                     "chat": CHAT_JSON, "from": USER_JSON, "text": text},
-    }, bot)
+    msg = {"message_id": Ids.next(), "date": 1760000000,
+           "chat": CHAT_JSON, "from": USER_JSON, "text": text}
+    if text.startswith("/"):
+        msg["entities"] = [{"type": "bot_command", "offset": 0,
+                            "length": len(text.split()[0])}]
+    return Update.de_json({"update_id": Ids.next(), "message": msg}, bot)
 
 
 def show_tracebacks(app):
@@ -107,6 +109,8 @@ async def main():
     calls: list[dict] = []
     patch_bot(app, calls)  # patch BEFORE any init; we never initialize the bot
     app._initialized = True  # skip full initialize() (would hit network for getMe)
+    from telegram import User as TGUser
+    app.bot._bot_user = TGUser(999, "YPbot", True, username="yp_mgmt_bot")
     show_tracebacks(app)
 
     convs = [h for grp in app.handlers.values() for h in grp

@@ -16,6 +16,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 TMP = tempfile.mkdtemp()
 os.environ["BOT_TOKEN"] = "999:T"
 os.environ["DB_PATH"] = os.path.join(TMP, "data", "yp_mgmt.db")
+os.environ["ADMIN_IDS"] = "4242"
 os.environ["DEMO_SEED"] = "1"  # fill demo data to have something to lose
 
 from bot import database as db  # noqa: E402

@@ -14,6 +14,7 @@ from telegram.request import HTTPXRequest
 from telegram.warnings import PTBUserWarning
 
 from bot import database as db
+from bot import gate
 from bot import keyboards as kb
 from bot import texts
 from bot.config import ADMIN_IDS, BOT_TOKEN, DASH_PORT, GROUP_CHAT_ID
@@ -109,6 +110,14 @@ def build_app() -> Application:
     app.bot_data["admin_ids"] = ADMIN_IDS
     app.bot_data["group_chat_id"] = GROUP_CHAT_ID
 
+    # ---- group-lock gate (runs FIRST, can stop every update below it)
+    app.add_handler(MessageHandler(filters.ALL, gate.message_gate), group=-1)
+    app.add_handler(CallbackQueryHandler(gate.callback_gate), group=-1)
+    if GROUP_CHAT_ID:
+        logger.info("🔐 group-lock ON — only chat %s may use the bot", GROUP_CHAT_ID)
+    else:
+        logger.info("🔓 group-lock OFF — set GROUP_CHAT_ID to lock the bot to one group")
+
     # ---- commands (work in DM + groups)
     app.add_handler(CommandHandler("start", start.cmd_start))
     app.add_handler(CommandHandler("help", start.cmd_start))
@@ -120,6 +129,7 @@ def build_app() -> Application:
     app.add_handler(CommandHandler("backup", admin.cmd_backup))
     app.add_handler(CommandHandler("wipe", admin.cmd_wipe))
     app.add_handler(CommandHandler("restore", admin.cmd_restore))
+    app.add_handler(CommandHandler("reset_all", admin.cmd_reset_all))
 
     # ---- wizards: ONE merged conversation for project+task flows
     app.add_handler(wizard_conversation())

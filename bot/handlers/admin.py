@@ -14,7 +14,7 @@ from telegram.ext import ContextTypes
 from bot import database as db
 from bot import keyboards as kb
 from bot import texts
-from bot.config import DB_PATH, ROLES
+from bot.config import ADMIN_IDS, DB_PATH, ROLES
 from bot.utils import esc, is_manager, role_badge, user_of
 
 logger = logging.getLogger("yp-mgmt")
@@ -46,6 +46,34 @@ async def cmd_wipe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "اعضا و نقش‌ها دست‌نخورده می‌مونن.\n\n"
         "💡 پیشنهاد: اول با /backup بکاپ بگیر.",
         reply_markup=kb.wipe_confirm())
+
+
+async def _send_backup(query, chat) -> bool:
+    """Snapshot the DB into the current chat; True on success."""
+    try:
+        fname = f"yp-mgmt-backup-{datetime.utcnow():%Y-%m-%d-%H%M}.db"
+        with open(DB_PATH, "rb") as fh:
+            await chat.reply_document(fh, filename=fname)
+        return True
+    except Exception:
+        return False
+
+
+async def cmd_reset_all(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """/reset_all — full factory reset (board + members + roles), ADMIN_IDS only.
+    Sends a safety backup first; wipes only after explicit confirmation."""
+    user = user_of(update, context)
+    uid = update.effective_user.id if update.effective_user else None
+    if uid not in ADMIN_IDS or not update.effective_message:
+        return
+    sent = await _send_backup(None, update.effective_message)
+    await update.effective_message.reply_text(
+        "💣 <b>ریست کامل کارخانه‌ای</b>\n─────────────────────\n"
+        + ("📦 بکاپ اضطراری بالا فرستاده شد — اگه پشیمون شدی با /restore برش گردون.\n"
+           if sent else "⚠️ ارسال بکاپ اضطراری ممکن نشد!\n")
+        + "همه‌ی <b>پروژه‌ها، تسک‌ها، اعضا و نقش‌ها</b> برای همیشه پاک می‌شن.\n"
+        "مطمئنی؟",
+        reply_markup=kb.reset_confirm())
 
 
 async def cmd_restore(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -245,13 +273,24 @@ async def admin_router(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             reply_markup=kb.back("menu:admin"))
 
     elif action == "backup":
-        try:
-            fname = f"yp-mgmt-backup-{datetime.utcnow():%Y-%m-%d-%H%M}.db"
-            with open(DB_PATH, "rb") as fh:
-                await query.message.reply_document(fh, filename=fname)
-            await query.answer("💾 بکاپ برات ارسال شد")
-        except Exception as e:  # file missing etc.
-            await query.answer(f"❌ خطا در بکاپ: {e}", show_alert=True)
+        await _send_backup(query, query.message)
+        await query.answer("💾 بکاپ برات ارسال شد")
+
+    elif action == "reset_go":
+        if user["tg_id"] not in ADMIN_IDS:
+            await query.answer("فقط ادمین اصلی (ADMIN_IDS) مجاز به ریست کامله",
+                               show_alert=True)
+            return
+        db.wipe_all()
+        await query.edit_message_text(
+            "🧨 <b>ربات کامل ریست شد</b>\n─────────────────────\n"
+            "پروژه‌ها، تسک‌ها، اعضا و نقش‌ها — همه صفر.\n"
+            "برای شروع دوباره: توی گروه /start بزنید 🚀",
+            reply_markup=kb.back("menu:main"))
+
+    elif action == "reset_no":
+        await query.edit_message_text("🙅 هیچی پاک نشد — امن موند.",
+                                      reply_markup=kb.admin_menu())
 
 
 async def show_team(update: Update, context: ContextTypes.DEFAULT_TYPE,

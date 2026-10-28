@@ -231,6 +231,13 @@ def wipe_confirm() -> InlineKeyboardMarkup:
     ])
 
 
+def reset_confirm() -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🧨 بله، ریست کامل", callback_data="admin:reset_go"),
+         InlineKeyboardButton("🙅 لغو", callback_data="admin:reset_no")],
+    ])
+
+
 def members_manage(users) -> InlineKeyboardMarkup:
     rows = []
     for u in users[:25]:
