@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from bot import database as db
+from bot import jdate
 from bot.config import (IDEA_CATEGORIES, PROJECT_STATUSES, PROJECT_TYPES, ROLES,
                         TASK_PRIORITIES, TASK_STATUSES)
 from bot.utils import days_left
@@ -47,7 +48,7 @@ def api_dashboard() -> dict:
             "type": PROJECT_TYPES.get(p["ptype"], {"label": "?", "emoji": "📦"}),
             "status": PROJECT_STATUSES.get(p["status"], {"label": "?", "emoji": "❓"}),
             "status_key": p["status"],
-            "deadline": p["deadline"],
+            "deadline": jdate.jalali_disp(p["deadline"]) or "—",
             "deadline_meta": _deadline_meta(p["deadline"]),
             "tasks_total": len(tasks),
             "tasks_done": done,

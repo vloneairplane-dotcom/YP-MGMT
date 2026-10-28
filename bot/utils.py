@@ -8,6 +8,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 
 from bot import database as db
+from bot import jdate
 from bot.config import MANAGER_ROLES, ROLES
 
 
@@ -66,34 +67,20 @@ def deadline_badge(deadline: str | None) -> str:
 
 
 def parse_deadline(text: str) -> str | None:
-    """Accept 'YYYY-MM-DD', '+3' days, or Persian-ish '3 روز دیگر'."""
-    text = text.strip()
-    if not text or text in {"ندارد", "بدون", "-"}:
-        return None
-    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%d-%m-%Y", "%d/%m/%Y"):
-        try:
-            return datetime.strptime(text, fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-    digits = text.replace("۰", "0").replace("۱", "1").replace("۲", "2") \
-        .replace("۳", "3").replace("۴", "4").replace("۵", "5") \
-        .replace("۶", "6").replace("۷", "7").replace("۸", "8").replace("۹", "9")
-    num = ""
-    for ch in digits:
-        if ch.isdigit():
-            num += ch
-        elif num:
-            break
-    if num and ("روز" in text or "day" in text.lower() or "+" in text):
-        return (datetime.utcnow() + timedelta(days=int(num))).strftime("%Y-%m-%d")
-    return None
+    """Human-typed deadline → ISO Gregorian for storage. Speaks Jalali first:
+    '۱۴/۰۸/۱۶', '16 آبان', '10 روز دیگر', 'فردا', ISO Gregorian, '+7'."""
+    return jdate.parse(text)
 
 
 def date_disp(deadline: str | None) -> str:
-    """Wrap an ISO date in LRM marks so RTL bidi doesn't flip it backwards."""
+    """Stored ISO Gregorian → Persian Jalali display (۱۴۰۵/۰۸/۱۶), wrapped in LRM
+    marks so RTL bidi never flips digits."""
     if not deadline:
         return "—"
-    return f"\u200e{deadline}\u200e"
+    j = jdate.jalali_disp(deadline)
+    if j:
+        return f"\u200e{j}\u200e"
+    return f"\u200e{esc(deadline)}\u200e"
 
 
 def progress_bar(done: int, total: int, width: int = 8) -> str:

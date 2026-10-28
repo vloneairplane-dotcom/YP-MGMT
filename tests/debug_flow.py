@@ -395,7 +395,9 @@ def main():
     import bot.texts as texts
     card = texts.project_card_short({"id": 1, "title": "x", "ptype": "single",
                                      "status": "idea", "deadline": "2027-01-08"})
-    ok("bidi: project card uses wrapped date", "\u200e2027-01-08\u200e" in card)
+    import bot.utils as _u
+    ok("bidi: project card uses wrapped Jalali date",
+       _u.date_disp("2027-01-08") in card, repr(card)[:140])
     print("\n" + ("🎉 ALL FLOW CHECKS PASS" if FAIL == 0 else f"⚠️ {FAIL} FAILURES"))
     return 1 if FAIL else 0
 

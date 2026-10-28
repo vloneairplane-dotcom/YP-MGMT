@@ -161,7 +161,7 @@ async def project_edit_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         context.user_data["dl_edit_pid"] = pid
         await query.answer()
         await query.edit_message_text(
-            "✍️ تاریخ جدید رو بنویس (مثال: <code>2026-11-01</code> یا <code>10 روز دیگر</code>)\n"
+            "✍️ تاریخ شمسی جدید رو بنویس — <code>1405/08/16</code> · <code>16 آبان</code> · <code>10 روز دیگر</code>\n"
             "برای حذف ددلاین «-» رو بفرست:",
             reply_markup=kb.back(f"proj:view:{pid}"),
         )
@@ -195,7 +195,7 @@ async def handle_dl_edit_text(update: Update, context: ContextTypes.DEFAULT_TYPE
     if not ok and p:
         context.user_data["dl_edit_pid"] = pid  # let them retry
         await update.effective_message.reply_text(
-            "🤔 نفهمیدم! مثال‌ها: <code>2026-11-01</code> — <code>1405-08-16</code> — <code>10 روز دیگر</code>")
+            "🤔 نفهمیدم! مثال‌های معتبر: <code>1405/08/16</code> — <code>16 آبان</code> — <code>10 روز دیگر</code> — <code>فردا</code>")
         return True
     if p:
         db.log_activity(None, "project", f"ددلاین «{p['title']}» → {deadline or 'حذف'}")
@@ -283,7 +283,7 @@ async def new_project_desc(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     text = (update.effective_message.text or "").strip()
     _draft.setdefault(user["tg_id"], {})["description"] = "" if text == "-" else text
     await update.effective_message.reply_text(
-        "⏰ ددلاین پروژه رو مشخص کن:",
+        "⏰ ددلاین پروژه رو مشخص کن (تاریخ شمسی):",
         reply_markup=kb.deadline_pick())
     return P_DL
 
@@ -300,7 +300,7 @@ async def new_project_dl_btn(update: Update, context: ContextTypes.DEFAULT_TYPE)
         deadline = (datetime.utcnow() + timedelta(days=int(val))).strftime("%Y-%m-%d")
     elif val == "manual":
         await query.edit_message_text(
-            "✍️ تاریخ رو بنویس (مثال: <code>2026-11-01</code> یا <code>10 روز دیگر</code>)",
+            "✍️ تاریخ شمسی رو بنویس — مثال: <code>1405/08/16</code> یا <code>16 آبان</code> یا <code>10 روز دیگر</code>",
         )
         return DL_WAIT
     draft = _draft.setdefault(user["tg_id"] if user else 0, {})

@@ -185,7 +185,7 @@ async def new_task_dl_btn(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if val.isdigit():
         deadline = (datetime.utcnow() + timedelta(days=int(val))).strftime("%Y-%m-%d")
     elif val == "manual":
-        await query.edit_message_text("✍️ تاریخ رو بنویس (مثال: <code>2026-11-01</code>)")
+        await query.edit_message_text("✍️ تاریخ شمسی رو بنویس — <code>1405/08/16</code> یا <code>16 آبان</code> یا <code>3 روز دیگر</code>")
         return T_DL_WAIT
     if user:
         _tdraft.setdefault(user["tg_id"], {})["deadline"] = deadline

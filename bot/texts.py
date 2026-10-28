@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
+from bot import jdate
 from bot.config import (IDEA_CATEGORIES, PROJECT_STATUSES, PROJECT_TYPES,
                         ROLES, TASK_PRIORITIES, TASK_STATUSES)
 from bot.utils import date_disp, esc
@@ -161,9 +162,15 @@ BACK = "🔙 بازگشت"
 
 
 def fmt_dt(iso: str | None) -> str:
+    """ISO timestamp → '۱۴۰۵/۰۸/۰۶ — ۱۲:۳۱' (Jalali with Persian digits)."""
     if not iso:
         return "—"
     try:
-        return datetime.fromisoformat(iso).strftime("%Y-%m-%d %H:%M")
+        dt = datetime.fromisoformat(iso)
     except ValueError:
         return iso
+    j = jdate.jalali_disp(dt.strftime("%Y-%m-%d"))
+    if not j:
+        return iso[:16].replace("T", " ")
+    time_str = f"{dt.hour:02d}:{dt.minute:02d}".translate(jdate.FA_DIGITS)
+    return f"{j} — {time_str}"

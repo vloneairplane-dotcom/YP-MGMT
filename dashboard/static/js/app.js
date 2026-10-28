@@ -53,7 +53,7 @@ function render(d) {
       <div class="bar"><i style="width:${p.progress}%"></i></div>
       <div class="pc-foot">
         <span>🧩 ${p.tasks_done}/${p.tasks_total} تسک</span>
-        <span class="tone-${p.deadline_meta.tone}">⏰ ${esc(p.deadline_meta.label)}</span>
+        <span class="tone-${p.deadline_meta.tone}">⏰ <bdi>${esc(p.deadline)}</bdi>${p.deadline && p.deadline !== "—" ? " · " : ""}${esc(p.deadline_meta.label)}</span>
       </div>
     </div>`).join("");
 
