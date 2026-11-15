@@ -95,5 +95,47 @@ asyncio.run(reminders.check_deadlines(ctx))
 late_today = [t for _, t in sent if "captions" in t]
 ok("overdue nags again on a new day only", len(late_today) == 1, len(late_today))
 
+# ═══ cycle nags (every-N-days re-tag per project) ═══
+from datetime import timedelta as _td
+from bot import config as cfg  # noqa: E402
+
+PID2 = db.create_project("Beta", "cycle", "single", None, None, None)
+T_IDLE = db.create_task(PID2, "idle-long", ali_id, "", "normal", None)
+with db.get_db() as conn:  # project created 5 days ago
+    conn.execute("UPDATE projects SET created_at=? WHERE id=?",
+                 ((datetime.utcnow() - _td(days=5)).isoformat(timespec="seconds"), PID2))
+
+def run():
+    sent.clear()
+    asyncio.run(reminders.check_deadlines(ctx))
+    return [t for _, t in sent]
+
+cfg.NAG_DEFAULT_DAYS = 3
+msgs = run()
+cyc = [t for t in msgs if "idle-long" in t]
+ok("cycle: fires after default interval, tags owner",
+   len(cyc) == 1 and "@ali_art" in cyc[0] and "Beta" in cyc[0], cyc)
+ok("cycle: jalali shown as 'بدون ددلاین' label", "بدون ددلاین" in cyc[0], cyc[0][:200])
+ok("cycle: dedup — immediate second run silent", not [t for t in run() if "idle-long" in t])
+
+with db.get_db() as conn:  # pretend last cycle was 4 days ago → due again
+    conn.execute("UPDATE reminders SET sent_at=? WHERE project_id=? AND kind='cycle'",
+                 ((datetime.utcnow() - _td(days=4)).isoformat(timespec="seconds"), PID2))
+ok("cycle: re-fires after interval elapsed",
+   len([t for t in run() if "idle-long" in t]) == 1)
+
+db.set_project_nag_days(PID2, 0)  # project-level off
+with db.get_db() as conn:
+    conn.execute("UPDATE reminders SET sent_at=? WHERE project_id=? AND kind='cycle'",
+                 ((datetime.utcnow() - _td(days=30)).isoformat(timespec="seconds"), PID2))
+ok("cycle: per-project 0 disables even when global on", not [t for t in run() if "idle-long" in t])
+
+db.set_project_nag_days(PID2, 1)
+with db.get_db() as conn:  # fresh project (created now) not nagged yet
+    conn.execute("UPDATE projects SET created_at=? WHERE id=?",
+                 (datetime.utcnow().isoformat(timespec="seconds"), PID2))
+    conn.execute("DELETE FROM reminders WHERE project_id=? AND kind='cycle'", (PID2,))
+ok("cycle: brand-new project waits one interval", not [t for t in run() if "idle-long" in t])
+
 print("ALL REMINDER TESTS PASS" if FAIL == 0 else f"{FAIL} FAILURES")
 sys.exit(1 if FAIL else 0)

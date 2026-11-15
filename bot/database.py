@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS projects (
     created_by INTEGER,
     chat_id INTEGER,
     archived INTEGER DEFAULT 0,
+    nag_days INTEGER,
     created_at TEXT NOT NULL
 );
 
@@ -94,6 +95,9 @@ def get_db():
 def init_db() -> None:
     with get_db() as db:
         db.executescript(SCHEMA)
+        cols = {r[1] for r in db.execute("PRAGMA table_info(projects)")}
+        if "nag_days" not in cols:          # older DB / restored backup
+            db.execute("ALTER TABLE projects ADD COLUMN nag_days INTEGER")
 
 
 # ---------------------------------------------------------------- users
@@ -155,6 +159,31 @@ def create_project(title: str, description: str, ptype: str, deadline: str | Non
 def get_project(pid: int) -> sqlite3.Row | None:
     with get_db() as db:
         return db.execute("SELECT * FROM projects WHERE id=?", (pid,)).fetchone()
+
+
+def set_project_nag_days(pid: int, days: int | None) -> None:
+    """Cycle-reminder cadence: NULL=global default, 0=off, N=every N days."""
+    with get_db() as db:
+        db.execute("UPDATE projects SET nag_days=? WHERE id=?", (days, pid))
+
+
+def get_reminder_sent_at(project_id: int | None, task_id: int | None, kind: str) -> str | None:
+    with get_db() as db:
+        row = db.execute(
+            "SELECT sent_at FROM reminders WHERE project_id IS ? AND task_id IS ? AND kind=?",
+            (project_id, task_id, kind),
+        ).fetchone()
+        return row[0] if row else None
+
+
+def bump_reminded(project_id: int | None, task_id: int | None, kind: str) -> None:
+    """Like mark_reminded but refreshes sent_at (for recurring cycles)."""
+    with get_db() as db:
+        db.execute(
+            """INSERT INTO reminders (project_id, task_id, kind, sent_at) VALUES (?,?,?,?)
+               ON CONFLICT(project_id, task_id, kind) DO UPDATE SET sent_at=excluded.sent_at""",
+            (project_id, task_id, kind, now()),
+        )
 
 
 def list_projects(archived: int = 0) -> list[sqlite3.Row]:

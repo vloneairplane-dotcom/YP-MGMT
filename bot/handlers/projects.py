@@ -11,6 +11,7 @@ from bot import database as db
 from bot import keyboards as kb
 from bot import texts
 from bot.config import PROJECT_STATUSES, PROJECT_TYPES, STATUS_FLOW
+from bot.jdate import fa_num
 from bot.utils import (date_disp, deadline_badge, esc, is_manager, parse_deadline,
                        user_of, progress_bar)
 
@@ -355,3 +356,52 @@ async def new_project_confirm(update: Update, context: ContextTypes.DEFAULT_TYPE
         reply_markup=kb.project_detail(pid, True),
     )
     return ConversationHandler.END
+
+
+async def project_nag_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """proj:nag:{pid} — recurring idle-task nag cadence picker."""
+    query = update.callback_query
+    if not query:
+        return
+    user = user_of(update, context)
+    if not is_manager(user):
+        await query.answer(texts.NO_PERMISSION, show_alert=True)
+        return
+    pid = int((query.data or "").split(":")[2])
+    p = db.get_project(pid)
+    if not p:
+        await query.answer("پروژه پیدا نشد", show_alert=True)
+        return
+    await query.answer()
+    cur = p["nag_days"] if "nag_days" in p.keys() else None
+    state = ("🔕 خاموش" if cur == 0 else
+             f"هر {fa_num(cur)} روز یک‌بار" if cur else "پیش‌فرض کلی ربات")
+    await query.edit_message_text(
+        f"🔁 یادآور دوره‌ای «{esc(p['title'])}»\n"
+        f"وضعیت فعلی: <b>{state}</b>\n"
+        "─────────────────────\n"
+        "هر چند روز، تسک‌های انجام‌نشدهٔ این پروژه با <b>تگ شدن صاحبش</b> "
+        "توی گروه یادآوری بشه؟",
+        reply_markup=kb.project_nag_pick(pid, cur),
+    )
+
+
+async def project_nag_set(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """proj:nagq:{pid}:{days} — apply cadence and redraw the project view."""
+    query = update.callback_query
+    if not query:
+        return
+    user = user_of(update, context)
+    if not is_manager(user):
+        await query.answer(texts.NO_PERMISSION, show_alert=True)
+        return
+    _, _, pid_s, days_s = (query.data or "").split(":")
+    pid, days = int(pid_s), max(0, min(30, int(days_s)))
+    db.set_project_nag_days(pid, days)
+    p = db.get_project(pid)
+    if p and user:
+        label = "خاموش" if days == 0 else f"هر {fa_num(days)} روز"
+        db.log_activity(user["id"], "project", f"یادآور دوره‌ای «{p['title']}» → {label}")
+    await query.answer("✅ یادآور دوره‌ای تنظیم شد")
+    if p:
+        await project_view(update, context)

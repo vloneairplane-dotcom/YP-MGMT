@@ -70,6 +70,7 @@ def api_dashboard() -> dict:
             "tasks_total": len(tasks),
             "tasks_done": done,
             "progress": round(100 * done / len(tasks)) if tasks else 0,
+            "nag_days": (p["nag_days"] if "nag_days" in p.keys() else None),
             "open_tasks": len(open_tks),
             "due_soon": due_soon,
             "overdue": late,

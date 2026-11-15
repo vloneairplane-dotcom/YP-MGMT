@@ -146,6 +146,8 @@ def build_app() -> Application:
     app.add_handler(CallbackQueryHandler(projects.project_next_status, pattern=r"^proj:next:"))
     app.add_handler(CallbackQueryHandler(projects.project_status_menu, pattern=r"^proj:status:"))
     app.add_handler(CallbackQueryHandler(projects.project_set_status, pattern=r"^proj:set:"))
+    app.add_handler(CallbackQueryHandler(projects.project_nag_menu, pattern=r"^proj:nag:"))
+    app.add_handler(CallbackQueryHandler(projects.project_nag_set, pattern=r"^proj:nagq:"))
     app.add_handler(CallbackQueryHandler(projects.project_archive, pattern=r"^proj:archive:"))
     app.add_handler(CallbackQueryHandler(projects.project_edit_pick, pattern=r"^proj:dlq:"))
     app.add_handler(CallbackQueryHandler(projects.project_edit_deadline, pattern=r"^proj:dl:"))

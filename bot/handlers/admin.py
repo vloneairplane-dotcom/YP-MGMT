@@ -135,6 +135,7 @@ async def restore_doc(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
             if os.path.exists(side):
                 os.remove(side)
 
+        db.init_db()   # migrate an older backup to the current schema in place
         s = db.stats()
         await msg.reply_text(
             "✅ <b>بکاپ بازگردانی شد!</b>\n─────────────────────\n"

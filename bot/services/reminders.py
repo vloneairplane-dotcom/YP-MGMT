@@ -13,12 +13,21 @@ from datetime import datetime
 
 from telegram.ext import ContextTypes
 
+from bot import config as cfg
 from bot import database as db
 from bot.config import TASK_STATUSES
 from bot.jdate import fa_num
 from bot.utils import date_disp, days_left, esc
 
 logger = logging.getLogger(__name__)
+
+
+def _age_days(ts) -> float:
+    """Days elapsed since a stored UTC iso timestamp (0 on junk)."""
+    try:
+        return (datetime.utcnow() - datetime.fromisoformat(str(ts)[:19])).total_seconds() / 86400
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def _mention(tk) -> str | None:
@@ -51,6 +60,8 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
         projects = db.list_projects()
         chat_id = next((p["chat_id"] for p in projects if p["chat_id"]), None)
 
+    all_tasks = db.list_tasks()
+
     # ---- project-level stages: -2 days, same day, overdue (one-shot per stage)
     for p in db.list_projects():
         d = days_left(p["deadline"])
@@ -72,7 +83,7 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
     today = datetime.utcnow().strftime("%Y-%m-%d")
     per_user: dict[int, list] = defaultdict(list)
     unassigned: list = []
-    for tk in db.list_tasks():
+    for tk in all_tasks:
         if tk["status"] == "done":
             continue
         d = days_left(tk["deadline"])
@@ -111,6 +122,42 @@ async def check_deadlines(context: ContextTypes.DEFAULT_TYPE) -> None:
                + "\nبا دکمهٔ «واگذاری» کسی رو مشخص کنید 🙏")
         if chat_id:
             await _send(context, chat_id, msg)
+
+    # ---- cycle nags: every N days re-list each member's open tasks per project,
+    # tagged — regardless of deadlines (REMIND_EVERY_DAYS env = global default,
+    # per-project override via «🔁 یادآور معطل‌ها» on the project screen).
+    for p in db.list_projects():
+        raw = p["nag_days"] if "nag_days" in p.keys() else None
+        days = cfg.NAG_DEFAULT_DAYS if raw is None else int(raw)
+        if days <= 0:
+            continue
+        open_tks = [t for t in all_tasks
+                    if t["project_id"] == p["id"] and t["status"] != "done"
+                    and t["assignee_id"]]
+        if not open_tks:
+            continue
+        anchor = db.get_reminder_sent_at(p["id"], None, "cycle") or p["created_at"]
+        if _age_days(anchor) < days:
+            continue
+        by_u: dict[int, list] = defaultdict(list)
+        for t in open_tks:
+            by_u[t["assignee_id"]].append(t)
+        for uid, tl in by_u.items():
+            tk0 = tl[0]
+            mention = _mention(tk0) or esc(tk0["assignee_name"] or "کاربر")
+            bullets = []
+            for t in tl:
+                st = TASK_STATUSES[t["status"]]
+                dl = (date_disp(t["deadline"]) if t["deadline"] else "بدون ددلاین")
+                late = " · ⛔" if (dd := days_left(t["deadline"])) is not None and dd < 0 else ""
+                bullets.append(f"• {esc(t['title'])} — {st['emoji']} {st['label']} · ⏰ {dl}{late}")
+            head = (f"🔁 {mention}، {fa_num(len(tl))} تسک معطل در «{esc(p['title'])}» داری:"
+                    if len(tl) > 1 else
+                    f"🔁 {mention}، تسک «{esc(tl[0]['title'])}» در «{esc(p['title'])}» هنوز بازه:")
+            if chat_id:
+                await _send(context, chat_id, head + "\n" + "\n".join(bullets)
+                            + "\nوضعیتش رو از «📊 وضعیت تسک» آپدیت کن 🙏")
+        db.bump_reminded(p["id"], None, "cycle")
 
     if not chat_id and (per_user or unassigned):
         logger.warning("reminder: no group chat id — nudges not delivered")

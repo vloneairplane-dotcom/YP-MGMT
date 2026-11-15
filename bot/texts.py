@@ -101,6 +101,10 @@ def project_detail(p, tasks) -> str:
         "─────────────────────",
         f"📋 <b>تسک‌ها ({len(tasks)}):</b>",
     ]
+    nag = p["nag_days"] if "nag_days" in p.keys() else None
+    if nag is not None:
+        extra = "🔕 خاموش" if nag == 0 else f"🔁 هر {jdate.fa_num(nag)} روز یادآوری"
+        lines.append(f"⏱ {extra}")
     if not tasks:
         lines.append("   — تسکی ثبت نشده")
     for tk in tasks:

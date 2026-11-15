@@ -107,7 +107,7 @@ function renderProjects(projects) {
       <div class="bar" title="پیشرفت"><i style="width:${p.progress}%"></i></div>
       <div class="pc-foot">
         <span>🧩 <bdi>${fa(p.tasks_done)}/${fa(p.tasks_total)}</bdi> ${fa(p.progress)}٪</span>
-        ${badge}
+        ${badge}${p.nag_days != null ? `<span class="pc-badge cyc">🔁 ${p.nag_days === 0 ? "خاموش" : "هر " + fa(p.nag_days) + " روز"}</span>` : ""}
         <span class="tone-${p.deadline_meta.tone}">⏰ <bdi>${esc(p.deadline)}</bdi> · ${esc(p.deadline_meta.label)}</span>
       </div>
     </div>`;

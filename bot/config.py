@@ -11,6 +11,7 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 ADMIN_IDS: set[int] = {
     int(x) for x in os.getenv("ADMIN_IDS", "").replace(" ", "").split(",") if x
 }
+NAG_DEFAULT_DAYS = max(0, int(os.getenv("REMIND_EVERY_DAYS", "3") or 0))  # cycle nag every N days; 0 = off
 GROUP_CHAT_ID = int(os.getenv("GROUP_CHAT_ID") or 0) or None
 # Render (and similar PaaS) inject PORT — honor it so the proxy can reach us
 DASH_PORT = int(os.getenv("PORT") or os.getenv("DASH_PORT", "8000"))

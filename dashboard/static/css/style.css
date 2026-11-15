@@ -194,6 +194,7 @@ body {
 .pc-badge.due   { color: #ffe2a8; background: rgba(251,191,36,.13); border: 1px solid rgba(251,191,36,.3); }
 .pc-badge.late  { color: #ffc2cc; background: rgba(255,84,112,.13); border: 1px solid rgba(255,84,112,.35); }
 .pc-badge.ok    { color: #b9f0d4; background: rgba(52,211,153,.1);  border: 1px solid rgba(52,211,153,.25); }
+.pc-badge.cyc   { color: #cfc4ff; background: rgba(167,139,250,.1); border: 1px solid rgba(167,139,250,.28); }
 
 /* empty states */
 .empty { grid-column: 1 / -1; text-align: center; padding: 42px 20px; border-radius: var(--r-md);

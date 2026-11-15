@@ -87,9 +87,26 @@ def project_detail(pid: int, is_manager: bool) -> InlineKeyboardMarkup:
             InlineKeyboardButton("✏️ ویرایش ددلاین", callback_data=f"proj:dl:{pid}"),
             InlineKeyboardButton("🗄 آرشیو", callback_data=f"proj:archive:{pid}"),
         ])
+        rows.append([
+            InlineKeyboardButton("🔁 یادآور معطل‌ها", callback_data=f"proj:nag:{pid}"),
+        ])
     rows.append([InlineKeyboardButton(texts.BACK, callback_data="menu:projects")])
     return InlineKeyboardMarkup(rows)
 
+
+def project_nag_pick(pid: int, current: int | None) -> InlineKeyboardMarkup:
+    """proj:nagq:{pid}:{days} — cycle-nag cadence picker (0 = off)."""
+    opts = [(1, "📆 هر روز"), (2, "⏳ هر ۲ روز"), (3, "⏳ هر ۳ روز"),
+            (7, "🗓 هر هفته"), (0, "🔕 خاموش")]
+    rows = []
+    for i in range(0, len(opts), 2):
+        row = []
+        for d, label in opts[i:i + 2]:
+            mark = " ✅" if current is not None and current == d else ""
+            row.append(InlineKeyboardButton(label + mark, callback_data=f"proj:nagq:{pid}:{d}"))
+        rows.append(row)
+    rows.append([InlineKeyboardButton(texts.BACK, callback_data=f"proj:view:{pid}")])
+    return InlineKeyboardMarkup(rows)
 
 def project_status_pick(pid: int) -> InlineKeyboardMarkup:
     rows = []

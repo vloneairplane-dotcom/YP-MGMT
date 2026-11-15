@@ -341,6 +341,7 @@ def audit_keyboards():
         "projects_list": kb.projects_list([p]),
         "project_detail": kb.project_detail(1, True),
         "project_status_pick": kb.project_status_pick(1),
+        "project_nag_pick": kb.project_nag_pick(1, 3),
         "project_type_pick": kb.project_type_pick(),
         "deadline_pick": kb.deadline_pick(),
         "deadline_edit": kb.deadline_pick(prefix="proj:dlq", pid=1),
