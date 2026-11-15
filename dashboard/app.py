@@ -20,6 +20,18 @@ app = FastAPI(title="Ye Pesare · Glass Panel", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory=BASE / "static"), name="static")
 
 
+def _fmt_at(ts: str | None) -> str:
+    """Stored UTC ISO → '۱۴۰/۰۸/۱۶ — ۱۲:۳۰' Persian stamp."""
+    if not ts:
+        return "—"
+    try:
+        dt = datetime.fromisoformat(str(ts)[:19])
+    except ValueError:
+        return jdate.fa_num(str(ts)[:16].replace("T", " "))
+    jal = jdate.to_jalali(dt.date().isoformat())
+    return f"{jdate.fa_num(jal)} — {jdate.fa_num(f'{dt:%H:%M}')}" if jal else jdate.fa_num(str(ts))
+
+
 def _deadline_meta(iso: str | None) -> dict:
     d = days_left(iso)
     if d is None:
@@ -41,6 +53,11 @@ def api_dashboard() -> dict:
     for p in db.list_projects():
         tasks = db.list_tasks(project_id=p["id"])
         done = sum(1 for t in tasks if t["status"] == "done")
+        open_tks = [t for t in tasks if t["status"] != "done"]
+        due_soon = sum(1 for t in open_tks
+                       if (dl := days_left(t["deadline"])) is not None and dl <= 0)
+        late = sum(1 for t in open_tks
+                   if (dl := days_left(t["deadline"])) is not None and dl < 0)
         projects.append({
             "id": p["id"],
             "title": p["title"],
@@ -53,6 +70,9 @@ def api_dashboard() -> dict:
             "tasks_total": len(tasks),
             "tasks_done": done,
             "progress": round(100 * done / len(tasks)) if tasks else 0,
+            "open_tasks": len(open_tks),
+            "due_soon": due_soon,
+            "overdue": late,
         })
 
     team = []
@@ -63,6 +83,10 @@ def api_dashboard() -> dict:
             "name": u["full_name"],
             "username": u["username"],
             "role": role,
+            "role_key": u["role"] or "",
+            "is_admin": bool(u["is_admin"]),
+            "avatar": (u["full_name"] or "؟").strip()[:1],
+            "total": len(my_tasks),
             "open_tasks": sum(1 for t in my_tasks if t["status"] != "done"),
             "done_tasks": sum(1 for t in my_tasks if t["status"] == "done"),
         })
@@ -77,6 +101,9 @@ def api_dashboard() -> dict:
             "status": TASK_STATUSES.get(t["status"], {"label": "?", "emoji": "❓"}),
             "priority": TASK_PRIORITIES.get(t["priority"], {"label": "?", "emoji": "🟡"}),
             "deadline": _deadline_meta(t["deadline"]),
+            "deadline_disp": jdate.jalali_disp(t["deadline"]) or "—",
+            "status_key": t["status"],
+            "priority_key": t["priority"],
         })
 
     ideas = []
@@ -91,9 +118,17 @@ def api_dashboard() -> dict:
             "action": a["action"],
             "detail": a["detail"],
             "at": a["created_at"],
+            "at_disp": _fmt_at(a["created_at"]),
         })
 
     s = db.stats()
+    open_all = [t for t in db.list_tasks() if t["status"] != "done"]
+    s["overdue"] = sum(1 for t in open_all
+                       if (d := days_left(t["deadline"])) is not None and d < 0)
+    def _dl(t):
+        return days_left(t["deadline"])
+    s["due_soon"] = sum(1 for t in open_all
+                        if _dl(t) is not None and 0 <= _dl(t) <= 1)
     upcoming = sorted(
         (p for p in projects if p["deadline_meta"]["days"] is not None
          and p["deadline_meta"]["days"] >= 0),
@@ -108,6 +143,7 @@ def api_dashboard() -> dict:
         "activity": activity,
         "next_deadline": upcoming[0] if upcoming else None,
         "updated_at": datetime.utcnow().isoformat(timespec="seconds"),
+        "updated_at_disp": _fmt_at(datetime.utcnow().isoformat(timespec="seconds")),
     }
 
 
