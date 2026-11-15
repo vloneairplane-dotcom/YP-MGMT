@@ -25,14 +25,14 @@ def _deadline_meta(iso: str | None) -> dict:
     if d is None:
         return {"days": None, "label": "بدون ددلاین", "tone": "muted"}
     if d < 0:
-        return {"days": d, "label": f"{abs(d)} روز گذشته", "tone": "danger"}
+        return {"days": d, "label": jdate.fa_num(f"{abs(d)} روز گذشته"), "tone": "danger"}
     if d == 0:
         return {"days": 0, "label": "امروز!", "tone": "danger"}
     if d <= 2:
-        return {"days": d, "label": f"{d} روز مونده", "tone": "warn"}
+        return {"days": d, "label": jdate.fa_num(f"{d} روز مونده"), "tone": "warn"}
     if d <= 7:
-        return {"days": d, "label": f"{d} روز مونده", "tone": "info"}
-    return {"days": d, "label": f"{d} روز مونده", "tone": "muted"}
+        return {"days": d, "label": jdate.fa_num(f"{d} روز مونده"), "tone": "info"}
+    return {"days": d, "label": jdate.fa_num(f"{d} روز مونده"), "tone": "muted"}
 
 
 @app.get("/api/dashboard")

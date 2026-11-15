@@ -56,14 +56,14 @@ def deadline_badge(deadline: str | None) -> str:
     if d is None:
         return "بدون ددلاین"
     if d < 0:
-        return f"⛔ گذشته ({abs(d)} روز)"
+        return f"⛔ گذشته ({jdate.fa_num(abs(d))} روز)"
     if d == 0:
         return "🔥 امروز!"
     if d == 1:
         return "⚡ فردا"
     if d <= 3:
-        return f"⚠️ {d} روز مونده"
-    return f"📅 {d} روز مونده"
+        return f"⚠️ {jdate.fa_num(d)} روز مونده"
+    return f"📅 {jdate.fa_num(d)} روز مونده"
 
 
 def parse_deadline(text: str) -> str | None:

@@ -212,7 +212,7 @@ def get_task(tid: int) -> sqlite3.Row | None:
 def list_tasks(project_id: int | None = None, assignee_id: int | None = None,
                status: str | None = None) -> list[sqlite3.Row]:
     q = """SELECT t.*, p.title AS project_title, u.full_name AS assignee_name,
-                  u.tg_id AS assignee_tg
+                  u.tg_id AS assignee_tg, u.username AS assignee_username
            FROM tasks t
            JOIN projects p ON p.id = t.project_id
            LEFT JOIN users u ON u.id = t.assignee_id

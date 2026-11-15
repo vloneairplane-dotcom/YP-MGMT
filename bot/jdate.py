@@ -52,6 +52,11 @@ def to_jalali(iso: str | None) -> str | None:
     return f"{j.year:04d}/{j.month:02d}/{j.day:02d}"
 
 
+def fa_num(n: int | str) -> str:
+    """Latin digits in a number/string → Persian digits, for consistent UI."""
+    return str(n).translate(FA_DIGITS)
+
+
 def jalali_disp(iso: str | None) -> str | None:
     """User-facing Persian date: '۱۴۰۵/۰۸/۱۶'."""
     s = to_jalali(iso)
