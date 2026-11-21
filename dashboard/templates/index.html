@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <meta name="theme-color" content="#05070f" />
+  <title>پنل مدیریت · یه پسر</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <!-- animated aurora backdrop -->
+  <div class="aurora" aria-hidden="true">
+    <span class="blob b1"></span><span class="blob b2"></span>
+    <span class="blob b3"></span><span class="blob b4"></span>
+    <div class="grid-lines"></div><div class="grain"></div>
+  </div>
+
+  <main class="shell">
+
+    <!-- ═══════════ TOP BAR ═══════════ -->
+    <nav class="glass topbar">
+      <div class="brand">
+        <span class="brand-mark">⚡</span>
+        <span class="brand-name">YP<em>·</em>MGMT</span>
+      </div>
+      <div class="top-live">
+        <span class="live-chip"><span class="dot"></span><span id="updatedAt">—</span></span>
+        <button class="ghost-btn" id="refreshBtn" type="button" title="بروزرسانی">
+          <span class="rico">⟳</span> <span class="rlabel">بروزرسانی</span>
+        </button>
+      </div>
+    </nav>
+
+    <!-- ═══════════ HERO ═══════════ -->
+    <header class="hero-row">
+      <article class="glass hero">
+        <div class="brand-chip">⚡ YE PESARE · CREW OPS</div>
+        <h1>پنل مدیریت <span class="grad">تیم</span></h1>
+        <p class="sub">پروژه‌ها، تسک‌ها، تیم و ایده‌ها — همه زنده، همه یک‌جا.</p>
+        <div class="hero-acts"><span class="hint">ساخت پروژه از تلگرام: <code>/new_project</code></span></div>
+      </article>
+
+      <article class="glass next-deadline" id="nextDeadline">
+        <div class="nd-days" id="ndDays">—</div>
+        <div class="nd-mid">
+          <div class="nd-label">⏰ نزدیک‌ترین ددلاین</div>
+          <div class="nd-title">…</div>
+          <div class="nd-when">…</div>
+        </div>
+      </article>
+    </header>
+
+    <!-- ═══════════ STATS ═══════════ -->
+    <section class="stats-row" aria-label="آمار">
+      <article class="glass stat-card accent-purple"><i class="glow"></i>
+        <div class="stat-emoji">📁</div>
+        <div class="stat-body">
+          <div class="stat-num" id="stProjects" data-v="0">0</div>
+          <div class="stat-label">پروژه فعال</div>
+        </div>
+      </article>
+      <article class="glass stat-card accent-cyan">
+        <div class="stat-emoji">🧩</div>
+        <div class="stat-body">
+          <div class="stat-num"><span id="stTasksDone" data-v="0">0</span><small> / <span id="stTasks" data-v="0">0</span></small></div>
+          <div class="stat-label">تسک انجام‌شده</div>
+        </div>
+      </article>
+      <article class="glass stat-card accent-amber">
+        <div class="stat-emoji">⚡</div>
+        <div class="stat-body">
+          <div class="stat-num" id="stDueSoon" data-v="0">0</div>
+          <div class="stat-label">ددلاین امروز/فردا</div>
+        </div>
+      </article>
+      <article class="glass stat-card accent-red">
+        <div class="stat-emoji">⛔</div>
+        <div class="stat-body">
+          <div class="stat-num" id="stOverdue" data-v="0">0</div>
+          <div class="stat-label">عقب‌افتاده</div>
+        </div>
+      </article>
+      <article class="glass stat-card accent-pink">
+        <div class="stat-emoji">👥</div>
+        <div class="stat-body">
+          <div class="stat-num" id="stMembers" data-v="0">0</div>
+          <div class="stat-label">عضو تیم</div>
+        </div>
+      </article>
+      <article class="glass stat-card accent-green">
+        <div class="stat-emoji">💡</div>
+        <div class="stat-body">
+          <div class="stat-num" id="stIdeas" data-v="0">0</div>
+          <div class="stat-label">ایده ثبت‌شده</div>
+        </div>
+      </article>
+    </section>
+
+    <!-- net error banner -->
+    <div class="glass net-err" id="netErr" hidden>⚠️ اتصال به سرور قطع شد — خودش تلاش مجدد می‌کنه…</div>
+
+    <!-- ═══════════ PROJECTS ═══════════ -->
+    <section class="glass block" id="boardBlock">
+      <div class="block-head">
+        <h2>📁 بورد پروژه‌ها</h2>
+        <span class="pill" id="projCount">—</span>
+      </div>
+      <div class="board-tools">
+        <div class="chips" id="projectFilters"></div>
+        <div class="search glass-inner">
+          <span>🔍</span><input id="searchBox" type="search" placeholder="جست‌وجوی پروژه…" />
+        </div>
+      </div>
+      <div class="projects-grid" id="projectsGrid"></div>
+    </section>
+
+    <!-- ═══════════ TASKS + TEAM ═══════════ -->
+    <section class="mid-row">
+      <article class="glass block">
+        <div class="block-head">
+          <h2>🧩 تسک‌های اخیر</h2>
+          <span class="pill">اولویت‌دار</span>
+        </div>
+        <ul class="task-list" id="taskList"></ul>
+      </article>
+      <article class="glass block">
+        <div class="block-head">
+          <h2>👥 تیم</h2>
+          <span class="pill" id="teamCount">—</span>
+        </div>
+        <ul class="team-list" id="teamList"></ul>
+      </article>
+    </section>
+
+    <!-- ═══════════ IDEAS + ACTIVITY ═══════════ -->
+    <section class="mid-row">
+      <article class="glass block">
+        <div class="block-head">
+          <h2>💡 ایده‌های اخیر</h2>
+          <span class="pill">ایده‌یاب خودکار</span>
+        </div>
+        <ul class="idea-list" id="ideaList"></ul>
+      </article>
+      <article class="glass block">
+        <div class="block-head">
+          <h2>🕓 فعالیت اخیر</h2>
+          <span class="pill">زنده</span>
+        </div>
+        <ul class="activity-list" id="activityList"></ul>
+      </article>
+    </section>
+
+    <footer class="foot">
+      Ye Pesare · Glass Panel — ساخته‌شده برای تیم 🤍
+      <span class="mono">Telegram Bot + Live Dashboard</span>
+    </footer>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

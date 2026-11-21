@@ -1,0 +1,16 @@
+[Unit]
+Description=Ye Pesare MGMT — Telegram bot + glass dashboard
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/YP-MGMT
+EnvironmentFile=/opt/YP-MGMT/.env
+ExecStart=/opt/YP-MGMT/.venv/bin/python run.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
